@@ -68,7 +68,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({ tooltip, placement = 'bot
       {children}
     </button>
     {tooltip && (
-      <span className={`pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-xl border border-slate-700/50 bg-slate-950 px-2.5 py-1.5 text-[11px] font-medium tracking-wide text-white shadow-xl opacity-0 scale-95 transition-all duration-150 ease-out group-hover:scale-100 group-hover:opacity-100 group-focus-within:scale-100 group-focus-within:opacity-100 ${placement === 'top' ? 'bottom-full mb-2 translate-y-1 group-hover:translate-y-0 group-focus-within:translate-y-0' : 'top-full mt-2 -translate-y-1 group-hover:translate-y-0 group-focus-within:translate-y-0'}`}>
+      <span className={`pointer-events-none absolute left-1/2 z-[1000] -translate-x-1/2 whitespace-nowrap rounded-xl border border-slate-700/50 bg-slate-950 px-2.5 py-1.5 text-[11px] font-medium tracking-wide text-white shadow-xl opacity-0 scale-95 transition-all duration-150 ease-out group-hover:scale-100 group-hover:opacity-100 group-focus-within:scale-100 group-focus-within:opacity-100 ${placement === 'top' ? 'bottom-full mb-2 translate-y-1 group-hover:translate-y-0 group-focus-within:translate-y-0' : 'top-full mt-2 -translate-y-1 group-hover:translate-y-0 group-focus-within:translate-y-0'}`}>
         {tooltip}
         <span className={`absolute left-1/2 -translate-x-1/2 border-4 border-transparent ${placement === 'top' ? 'top-full border-t-slate-950' : 'bottom-full border-b-slate-950'}`} />
       </span>
@@ -1680,7 +1680,7 @@ const App: React.FC = () => {
         })()}
 
         {confirmModal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmModal(null)} />
             <div className="relative bg-[var(--bg-card)] text-[var(--text-main)] rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 border border-[var(--border-color)]">
               <h3 className="text-xl font-bold mb-2">{t.areYouSure}</h3>
@@ -1962,7 +1962,7 @@ const App: React.FC = () => {
                               <MoreHorizontal className="w-5 h-5" />
                             </button>
                             {activeMenuId === article._id && (
-                              <div className="absolute right-0 mt-2 w-52 glass rounded-2xl shadow-2xl z-[100] py-2 animate-in zoom-in-95 duration-100 origin-top-right border border-[var(--border-color)]" onClick={(e) => e.stopPropagation()}>
+                              <div className="absolute right-0 mt-2 w-52 glass rounded-2xl shadow-2xl z-[300] py-2 animate-in zoom-in-95 duration-100 origin-top-right border border-[var(--border-color)]" onClick={(e) => e.stopPropagation()}>
                                 <button onClick={() => setEditArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Edit3 className="w-4 h-4 text-[var(--text-muted)]" /> {t.editArticle}</button>
                                 <button onClick={() => setTagModalArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Tag className="w-4 h-4 text-[var(--text-muted)]" /> {t.manageTags}</button>
                                 <button onClick={() => setFolderModalArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Move className="w-4 h-4 text-[var(--text-muted)]" /> {t.moveToFolder}</button>
@@ -1996,7 +1996,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Bottom Nav (Mobile Only) */}
-          <nav className="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-[var(--border-color)] px-6 py-3 pb-[calc(12px+var(--safe-area-bottom))] flex items-center justify-between z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-[var(--border-color)] px-6 py-3 pb-[calc(12px+var(--safe-area-bottom))] flex items-center justify-between z-[200] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
             <button 
               onClick={() => { setActiveFilter({ type: 'all' }); setIsLibraryOpen(false); setIsSettingsOpen(false); }}
               className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'all' && !isLibraryOpen && !isSettingsOpen ? 'text-blue-600 scale-110' : 'text-[var(--text-muted)]'}`}
@@ -2037,7 +2037,7 @@ const App: React.FC = () => {
 
 
         {isSettingsOpen && (
-          <div className="fixed inset-0 z-[190] bg-[var(--bg-main)] text-[var(--text-main)] animate-in fade-in duration-200 overflow-y-auto">
+          <div className="fixed inset-0 z-[210] bg-[var(--bg-main)] text-[var(--text-main)] animate-in fade-in duration-200 overflow-y-auto">
             <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-6 md:px-6 md:py-10 pb-32">
               <div className="mb-8 flex items-center justify-between">
                 <div>
@@ -2220,7 +2220,7 @@ const App: React.FC = () => {
 
         {/* Modals with themes support */}
         {editArticle && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEditArticle(null)} />
             <div className="relative bg-[var(--bg-card)] text-[var(--text-main)] rounded-3xl p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200 border border-[var(--border-color)]">
               <h3 className="text-2xl font-bold mb-6">{t.editArticle}</h3>
@@ -2248,7 +2248,7 @@ const App: React.FC = () => {
 
         {/* Tag Modal */}
         {tagModalArticle && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setTagModalArticle(null)} />
             <div className="relative bg-[var(--bg-card)] text-[var(--text-main)] rounded-3xl p-8 max-md w-full shadow-2xl animate-in zoom-in-95 duration-200 border border-[var(--border-color)]">
               <h3 className="text-2xl font-bold mb-2">{t.manageTags}</h3>
@@ -2274,7 +2274,7 @@ const App: React.FC = () => {
 
         {/* Folder Modal */}
         {folderModalArticle && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setFolderModalArticle(null)} />
             <div className="relative bg-[var(--bg-card)] text-[var(--text-main)] rounded-3xl p-8 max-md w-full shadow-2xl animate-in zoom-in-95 duration-200 border border-[var(--border-color)]">
               <h3 className="text-2xl font-bold mb-2">{t.moveToFolder}</h3>
@@ -2304,7 +2304,7 @@ const App: React.FC = () => {
         )}
 
         {/* Global Notifications */}
-        <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
+        <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-[500]">
           {toasts.map(toast => (
             <div key={toast.id} className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-right duration-300 ${toast.type === 'success' ? 'bg-slate-900 text-white' : toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'}`}>
               {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
@@ -2317,7 +2317,7 @@ const App: React.FC = () => {
         </div>
 
         {confirmModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmModal(null)} />
             <div className="relative bg-[var(--bg-card)] text-[var(--text-main)] rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 border border-[var(--border-color)]">
               <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-6"><Trash2 className="w-6 h-6" /></div>
@@ -2331,7 +2331,7 @@ const App: React.FC = () => {
           </div>
         )}
         {activePolicy && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setActivePolicy(null)} />
             <div className="relative bg-[var(--bg-card)] text-[var(--text-main)] rounded-3xl p-6 md:p-8 max-w-2xl w-full h-full max-h-[85vh] shadow-2xl animate-in zoom-in-95 duration-200 border border-[var(--border-color)] flex flex-col">
               <div className="flex items-center justify-between mb-6 pb-4 border-b border-[var(--border-color)]">
