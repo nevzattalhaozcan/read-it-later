@@ -20,45 +20,65 @@ export async function scrapeUrl(url: string, providedHtml?: string): Promise<Scr
   if (providedHtml) {
     html = providedHtml;
   } else {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'Accept-Language': 'en-US,en;q=0.9,tr-TR;q=0.8,tr;q=0.7',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Cache-Control': 'max-age=0',
-        'Connection': 'keep-alive',
-        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"macOS"',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1'
-      }
-    });
-    html = await response.text();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-    // Cloudflare / Bot Protection Check
-    const isCloudflareBlocked = 
-      html.includes('Just a moment...') ||
-      html.includes('Enable JavaScript and cookies to continue') ||
-      (response.status === 403 && html.includes('<title>Access denied</title>')) ||
-      html.includes('cf-browser-verification');
-
-    if (isCloudflareBlocked) {
-      console.log(`[Scraper] Anti-bot detected for ${url}. Using Jina AI fallback...`);
-      try {
-        const jinaResponse = await fetch(`https://r.jina.ai/${url}`, {
-          headers: { 'X-Return-Format': 'html' }
-        });
-        if (jinaResponse.ok) {
-          html = await jinaResponse.text();
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'Accept-Language': 'en-US,en;q=0.9,tr-TR;q=0.8,tr;q=0.7',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Cache-Control': 'max-age=0',
+          'Connection': 'keep-alive',
+          'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+          'Sec-Ch-Ua-Mobile': '?0',
+          'Sec-Ch-Ua-Platform': '"macOS"',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1'
         }
-      } catch (err) {
-        console.error('[Scraper] Jina AI fallback failed:', err);
+      });
+      html = await response.text();
+
+      // Cloudflare / Bot Protection Check
+      const isCloudflareBlocked = 
+        html.includes('Just a moment...') ||
+        html.includes('Enable JavaScript and cookies to continue') ||
+        (response.status === 403 && html.includes('<title>Access denied</title>')) ||
+        html.includes('cf-browser-verification');
+
+      if (isCloudflareBlocked) {
+        console.log(`[Scraper] Anti-bot detected for ${url}. Using Jina AI fallback...`);
+        const jinaController = new AbortController();
+        const jinaTimeout = setTimeout(() => jinaController.abort(), 10000); // 10s timeout
+        try {
+          const jinaResponse = await fetch(`https://r.jina.ai/${url}`, {
+            signal: jinaController.signal,
+            headers: { 'X-Return-Format': 'html' }
+          });
+          if (jinaResponse.ok) {
+            html = await jinaResponse.text();
+          }
+        } catch (err) {
+          console.error('[Scraper] Jina AI fallback failed:', err);
+        } finally {
+          clearTimeout(jinaTimeout);
+        }
       }
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        console.error(`[Scraper] Request timed out for ${url}`);
+      } else {
+        console.error(`[Scraper] Fetch failed for ${url}:`, err);
+      }
+      html = `<html><title>${url}</title><body>Failed to load content.</body></html>`;
+    } finally {
+      clearTimeout(timeout);
     }
   }
   

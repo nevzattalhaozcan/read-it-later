@@ -35,6 +35,7 @@ interface Article {
   isFavorite: boolean;
   isArchived: boolean;
   isRead: boolean;
+  isPending?: boolean;
   highlights: Highlight[];
   matchReason?: string;
 }
@@ -1949,10 +1950,16 @@ const App: React.FC = () => {
                         <div className="flex items-start justify-between gap-4 mb-3">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-3 mb-2 flex-wrap">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-600/5 px-2.5 py-1 rounded-lg">{article.siteName || 'link'}</span>
-                              <span className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                                <Clock className="w-3 h-3" /> {article.readingTimeMinutes} {t.minRead}
-                              </span>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-600/5 px-2.5 py-1 rounded-lg">{article.isPending ? '...' : (article.siteName || 'link')}</span>
+                              {article.isPending ? (
+                                <span className="flex items-center gap-1.5 text-[10px] font-bold text-blue-500 uppercase tracking-wider animate-pulse">
+                                  <Loader2 className="w-3 h-3 animate-spin" /> {lang === 'tr' ? 'TARANIYOR...' : 'SCRAPING...'}
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                                  <Clock className="w-3 h-3" /> {article.readingTimeMinutes} {t.minRead}
+                                </span>
+                              )}
                             </div>
                             <h2 className="text-xl font-bold group-hover:text-blue-600 transition-colors leading-tight line-clamp-2">{article.title}</h2>
                           </div>

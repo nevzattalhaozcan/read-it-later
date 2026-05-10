@@ -443,23 +443,36 @@ api.post('/articles', async (c) => {
 
   try {
     const userId = c.get('userId');
-    const scraped = await scrapeUrl(url, html);
+    
+    // 1. Create a placeholder article immediately
+    const tempTitle = new URL(url).hostname;
     const article = new Article({
       owner: userId,
       url,
-      ...scraped
+      title: tempTitle,
+      isPending: true
     });
     await article.save();
     
-    // Broadcast change
-    broadcast({ type: 'REFETCH_ARTICLES' });
+    // 2. Perform scraping in the background
+    (async () => {
+      try {
+        const scraped = await scrapeUrl(url, html);
+        await Article.findByIdAndUpdate(article._id, { ...scraped, isPending: false });
+        broadcast({ type: 'REFETCH_ARTICLES' });
+      } catch (err) {
+        console.error(`[Background Scrape] Failed for ${url}:`, err);
+        await Article.findByIdAndUpdate(article._id, { isPending: false });
+        broadcast({ type: 'REFETCH_ARTICLES' });
+      }
+    })();
     
     return c.json(article, 201);
   } catch (error: any) {
     if (error.code === 11000) {
       return c.json({ error: 'Article already exists' }, 409);
     }
-    return c.json({ error: 'Failed to scrape or save article' }, 500);
+    return c.json({ error: 'Failed to create article' }, 500);
   }
 });
 

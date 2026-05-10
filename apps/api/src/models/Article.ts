@@ -18,6 +18,7 @@ const ArticleSchema = new Schema({
   isRead: { type: Boolean, default: false },
   isFavorite: { type: Boolean, default: false },
   isArchived: { type: Boolean, default: false },
+  isPending: { type: Boolean, default: false },
   readingTimeMinutes: { type: Number },
   highlights: [{
     id: { type: String, required: true },
