@@ -1450,23 +1450,42 @@ const App: React.FC = () => {
               </TooltipButton>
 
               {isArticleMenuOpen && (
-                <div className="absolute top-full right-0 mt-2 w-52 glass rounded-2xl shadow-2xl z-50 py-2 animate-in zoom-in-95 slide-in-from-top-2 duration-150 origin-top-right">
-                  <button onClick={() => { updateArticle(selectedArticle._id, { isFavorite: !selectedArticle.isFavorite }); setIsArticleMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium">
-                    <Star className={`w-4 h-4 ${selectedArticle.isFavorite ? 'text-amber-500 fill-current' : 'text-[var(--text-muted)]'}`} /> 
-                    {selectedArticle.isFavorite ? t.removeFavorite : t.favorite}
+                <div className="absolute z-[300] glass rounded-2xl shadow-2xl py-2 animate-in duration-150 sm:block
+                  sm:right-full sm:top-1/2 sm:-translate-y-1/2 sm:mr-3 sm:w-48 sm:origin-right sm:slide-in-from-right-2
+                  top-full right-0 mt-2 w-auto flex flex-col items-center px-1.5 min-w-[44px] origin-top slide-in-from-top-2">
+                  
+                  <button 
+                    onClick={() => { updateArticle(selectedArticle._id, { isFavorite: !selectedArticle.isFavorite }); setIsArticleMenuOpen(false); }} 
+                    className="w-full flex items-center justify-center sm:justify-start gap-2 p-2.5 sm:px-4 sm:py-2 hover:bg-blue-600/5 rounded-xl transition-colors group"
+                  >
+                    <Star className={`w-4 h-4 transition-all group-active:scale-125 ${selectedArticle.isFavorite ? 'text-amber-500 fill-current' : 'text-[var(--text-muted)]'}`} /> 
+                    <span className="hidden sm:inline text-sm font-medium">{selectedArticle.isFavorite ? t.removeFavorite : t.favorite}</span>
                   </button>
-                  <button onClick={() => { window.open(selectedArticle.url, '_blank', 'noopener,noreferrer'); setIsArticleMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium">
+
+                  <button 
+                    onClick={() => { window.open(selectedArticle.url, '_blank', 'noopener,noreferrer'); setIsArticleMenuOpen(false); }} 
+                    className="w-full flex items-center justify-center sm:justify-start gap-2 p-2.5 sm:px-4 sm:py-2 hover:bg-blue-600/5 rounded-xl transition-colors"
+                  >
                     <ExternalLink className="w-4 h-4 text-[var(--text-muted)]" /> 
-                    {t.original}
+                    <span className="hidden sm:inline text-sm font-medium">{t.original}</span>
                   </button>
-                  <button onClick={() => { updateArticle(selectedArticle._id, { isArchived: !selectedArticle.isArchived }); setIsArticleMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium">
+
+                  <button 
+                    onClick={() => { updateArticle(selectedArticle._id, { isArchived: !selectedArticle.isArchived }); setIsArticleMenuOpen(false); }} 
+                    className="w-full flex items-center justify-center sm:justify-start gap-2 p-2.5 sm:px-4 sm:py-2 hover:bg-blue-600/5 rounded-xl transition-colors"
+                  >
                     <Archive className="w-4 h-4 text-[var(--text-muted)]" /> 
-                    {selectedArticle.isArchived ? t.unarchive : t.archiveArticle}
+                    <span className="hidden sm:inline text-sm font-medium">{selectedArticle.isArchived ? t.unarchive : t.archiveArticle}</span>
                   </button>
-                  <div className="h-px bg-[var(--border-color)] my-2" />
-                  <button onClick={() => { handleDelete(selectedArticle._id); setIsArticleMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-red-500/5 flex items-center gap-2 text-sm font-medium text-red-600">
+
+                  <div className="h-px bg-[var(--border-color)] my-1.5 w-8 sm:w-full" />
+
+                  <button 
+                    onClick={() => { handleDelete(selectedArticle._id); setIsArticleMenuOpen(false); }} 
+                    className="w-full flex items-center justify-center sm:justify-start gap-2 p-2.5 sm:px-4 sm:py-2 hover:bg-red-500/5 rounded-xl transition-colors text-red-600"
+                  >
                     <Trash2 className="w-4 h-4" /> 
-                    {t.delete}
+                    <span className="hidden sm:inline text-sm font-medium">{t.delete}</span>
                   </button>
                 </div>
               )}
