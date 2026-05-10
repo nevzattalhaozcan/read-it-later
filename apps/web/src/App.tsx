@@ -5,7 +5,7 @@ import {
   Inbox, Star, Search, MoreVertical,
   Archive, Check, MoreHorizontal, Edit3, Save, XCircle,
   Move, Sun, Moon, Coffee, Highlighter, MessageSquarePlus,
-  StickyNote, ChevronDown, Settings, LogOut, Key
+  StickyNote, ChevronDown, Settings, LogOut, Key, Copy, Link2, Languages
 } from 'lucide-react';
 import { translations, Lang } from './i18n';
 import { policies } from './policies';
@@ -61,6 +61,7 @@ const App: React.FC = () => {
   const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activePolicy, setActivePolicy] = useState<'terms' | 'privacy' | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, text: string, highlightId?: string | null } | null>(null);
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
@@ -97,6 +98,7 @@ const App: React.FC = () => {
   const [isArticleMenuOpen, setIsArticleMenuOpen] = useState(false);
   const [fontSizeIdx, setFontSizeIdx] = useState(2);
   const [widthIdx, setWidthIdx] = useState(1);
+  const deepLinkApplied = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const addUrlInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -165,6 +167,24 @@ const App: React.FC = () => {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (deepLinkApplied.current || !articles.length || selectedArticle) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const articleId = params.get('article');
+    const highlightId = params.get('highlight');
+    if (!articleId) return;
+
+    const article = articles.find(a => a._id === articleId);
+    if (!article) return;
+
+    deepLinkApplied.current = true;
+    setSelectedArticle(article);
+    if (highlightId) {
+      setTargetHighlightId(highlightId);
+    }
+  }, [articles, selectedArticle]);
 
   // Save lang+theme to DB when the user changes them.
   useEffect(() => {
@@ -418,6 +438,76 @@ const App: React.FC = () => {
       ...context
     });
   }, []);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    const selection = window.getSelection();
+    let text = selection?.toString() || '';
+    let highlightId: string | null | undefined;
+
+    // Check if clicked on a highlight even if no selection
+    const target = e.target as HTMLElement;
+    const highlightElement = target.closest('mark[data-highlight-id]');
+    if (highlightElement && !text) {
+      text = highlightElement.textContent || '';
+    }
+    if (highlightElement) {
+      highlightId = highlightElement.getAttribute('data-highlight-id');
+    }
+
+    if (text.trim()) {
+      e.preventDefault();
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        text: text.trim(),
+        highlightId
+      });
+      setHighlightToolbar(null);
+      setActiveHighlightPopover(null);
+    }
+  }, []);
+
+  const buildHighlightLink = (articleId: string, highlightId: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('article', articleId);
+    url.searchParams.set('highlight', highlightId);
+    return url.toString();
+  };
+
+  const closeContextMenu = () => setContextMenu(null);
+
+  const copyTextToClipboard = async (value: string, toastMessage: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      showToast(toastMessage);
+    } catch {
+      showToast(t.connectionError, 'error');
+    } finally {
+      closeContextMenu();
+    }
+  };
+
+  const handleCopySelection = () => {
+    if (!contextMenu?.text) return;
+    void copyTextToClipboard(contextMenu.text, t.copied);
+  };
+
+  const handleCopyHighlightLink = () => {
+    if (!selectedArticle || !contextMenu?.highlightId) return;
+    void copyTextToClipboard(buildHighlightLink(selectedArticle._id, contextMenu.highlightId), t.copiedLink);
+  };
+
+  const handleSearchGoogle = () => {
+    if (!contextMenu?.text) return;
+    window.open(`https://www.google.com/search?q=${encodeURIComponent(contextMenu.text)}`, '_blank', 'noopener,noreferrer');
+    closeContextMenu();
+  };
+
+  const handleTranslateSelection = () => {
+    if (!contextMenu?.text) return;
+    window.open(`https://translate.google.com/?sl=auto&text=${encodeURIComponent(contextMenu.text)}&op=translate`, '_blank', 'noopener,noreferrer');
+    closeContextMenu();
+  };
 
   const createHighlight = (withNote: boolean) => {
     if (!highlightToolbar || !selectedArticle) return;
@@ -832,7 +922,8 @@ const App: React.FC = () => {
 
   if (selectedArticle) {
     return (
-      <div className="min-h-screen bg-[var(--bg-card)] text-[var(--text-main)] selection:bg-yellow-200/50 animate-in fade-in duration-300 theme-transition relative" onClick={() => {
+      <div className="min-h-screen bg-[var(--bg-card)] text-[var(--text-main)] selection:bg-yellow-200/50 animate-in fade-in duration-300 theme-transition relative" onContextMenu={handleContextMenu} onClick={() => {
+        setContextMenu(null);
         if (!window.getSelection()?.toString()) {
           setHighlightToolbar(null);
           setActiveHighlightPopover(null);
@@ -940,6 +1031,47 @@ const App: React.FC = () => {
             onClick={(e) => { e.stopPropagation(); openHighlightAction(indicator.id, { x: indicator.x, y: indicator.y }); }}
             title={t.viewNote}
           >
+
+          {contextMenu && (
+            <div
+              className="fixed z-[180] min-w-64 animate-in fade-in zoom-in-95 duration-150"
+              style={{ top: contextMenu.y + 8, left: contextMenu.x + 8 }}
+              onClick={(e) => e.stopPropagation()}
+              onContextMenu={(e) => e.preventDefault()}
+            >
+              <div className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-2xl backdrop-blur-md">
+                <button
+                  onClick={handleCopySelection}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
+                >
+                  <Copy className="w-4 h-4 text-[var(--text-muted)]" />
+                  {t.copy}
+                </button>
+                <button
+                  onClick={handleCopyHighlightLink}
+                  disabled={!contextMenu.highlightId}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Link2 className="w-4 h-4 text-[var(--text-muted)]" />
+                  {t.copyLinkToHighlight}
+                </button>
+                <button
+                  onClick={handleSearchGoogle}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
+                >
+                  <Search className="w-4 h-4 text-[var(--text-muted)]" />
+                  {t.searchGoogleForSelection}
+                </button>
+                <button
+                  onClick={handleTranslateSelection}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
+                >
+                  <Languages className="w-4 h-4 text-[var(--text-muted)]" />
+                  {t.translateSelection}
+                </button>
+              </div>
+            </div>
+          )}
             <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-[var(--bg-card)]/50 backdrop-blur-md border border-[var(--border-color)] shadow-sm group-hover:shadow-md group-hover:border-[var(--note-indicator-color)]/50 group-hover:bg-[var(--bg-card)] transition-all">
               <StickyNote className="w-4 h-4 text-[var(--note-indicator-color)] opacity-70 group-hover:opacity-100 transition-all" />
             </div>
