@@ -46,6 +46,12 @@
   --note-indicator-color: #d97706;
 }
 
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
+}
+
 body {
   background-color: var(--bg-main);
   color: var(--text-main);
