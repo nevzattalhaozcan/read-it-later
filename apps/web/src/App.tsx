@@ -3,7 +3,7 @@ import {
   Loader2, ExternalLink, Clock, Plus, Trash2,
   ChevronRight, X, CheckCircle2, AlertCircle, Info, Tag, Folder,
   Inbox, Star, Search, MoreVertical,
-  Archive, Check, MoreHorizontal, Edit3, Save, XCircle,
+  Archive, Check, MoreHorizontal, Edit3, Save,
   Move, Sun, Moon, Coffee, Highlighter, MessageSquarePlus,
   StickyNote, ChevronDown, Settings, LogOut, Copy, Languages
 } from 'lucide-react';
@@ -2269,59 +2269,99 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Tag Modal */}
         {tagModalArticle && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setTagModalArticle(null)} />
-            <div className="relative bg-[var(--bg-card)] text-[var(--text-main)] rounded-3xl p-8 max-md w-full shadow-2xl animate-in zoom-in-95 duration-200 border border-[var(--border-color)]">
-              <h3 className="text-2xl font-bold mb-2">{t.manageTags}</h3>
-              <p className="text-[var(--text-muted)] text-sm mb-6 line-clamp-1">{tagModalArticle.title}</p>
-              <div className="mb-8">
-                <label className="block text-sm font-bold text-[var(--text-muted)] tracking-widest mb-3">{t.currentTags}</label>
-                <div className="flex flex-wrap gap-2">
-                  {tagModalArticle.tags.map(t_str => <span key={t_str} className="pl-3 pr-2 py-1.5 bg-blue-600/10 text-blue-600 text-sm font-bold rounded-xl flex items-center gap-2 group">#{t_str}<button onClick={() => removeTag(t_str)} className="text-blue-300 hover:text-red-500 transition-colors"><XCircle className="w-4 h-4" /></button></span>)}
-                  {tagModalArticle.tags.length === 0 && <p className="text-[var(--text-muted)] text-sm italic">{t.noTagsYet}</p>}
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setTagModalArticle(null)} />
+            <div className="relative bg-[var(--bg-card)] text-[var(--text-main)] rounded-[2rem] p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 border border-[var(--border-color)]">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h3 className="text-xl font-bold tracking-tight">{t.manageTags}</h3>
+                  <p className="text-[var(--text-muted)] text-[11px] font-medium uppercase tracking-wider mt-1">{tagModalArticle.title}</p>
                 </div>
+                <button onClick={() => setTagModalArticle(null)} className="p-2 hover:bg-[var(--bg-main)] rounded-xl transition-colors text-[var(--text-muted)]">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <form onSubmit={handleAddTag}>
-                <label className="block text-sm font-bold text-[var(--text-muted)] tracking-widest mb-2">{t.addNewTag}</label>
-                <div className="flex gap-2">
-                  <input type="text" placeholder={t.enterTag} value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} className="flex-1 px-4 py-3 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl focus:ring-2 focus:ring-blue-600 transition-all outline-none text-[var(--text-main)]" autoFocus />
-                  <button type="submit" className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"><Plus className="w-6 h-6" /></button>
+
+              <div className="mt-6">
+                <div className="flex flex-wrap gap-1.5 mb-6">
+                  {tagModalArticle.tags.map(t_str => (
+                    <span key={t_str} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/5 text-blue-600 text-xs font-bold rounded-lg border border-blue-600/10">
+                      #{t_str}
+                      <button onClick={() => removeTag(t_str)} className="hover:text-red-500 transition-colors">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {tagModalArticle.tags.length === 0 && <p className="text-[var(--text-muted)] text-xs italic py-2">{t.noTagsYet}</p>}
                 </div>
-              </form>
-              <button onClick={() => setTagModalArticle(null)} className="w-full mt-8 py-3 bg-slate-900 text-white rounded-xl font-bold transition-colors">{t.done}</button>
+
+                <form onSubmit={handleAddTag} className="relative">
+                  <input 
+                    type="text" 
+                    placeholder={t.enterTag} 
+                    value={newTagInput} 
+                    onChange={(e) => setNewTagInput(e.target.value)} 
+                    className="w-full pl-4 pr-12 py-3 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-2xl focus:ring-2 focus:ring-blue-600 transition-all outline-none text-[var(--text-main)] text-sm" 
+                    autoFocus 
+                  />
+                  <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-95">
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Folder Modal */}
         {folderModalArticle && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setFolderModalArticle(null)} />
-            <div className="relative bg-[var(--bg-card)] text-[var(--text-main)] rounded-3xl p-8 max-md w-full shadow-2xl animate-in zoom-in-95 duration-200 border border-[var(--border-color)]">
-              <h3 className="text-2xl font-bold mb-2">{t.moveToFolder}</h3>
-              <p className="text-[var(--text-muted)] text-sm mb-6 line-clamp-1">{folderModalArticle.title}</p>
-              <div className="mb-8 space-y-2 max-h-48 overflow-y-auto">
-                <label className="block text-sm font-bold text-[var(--text-muted)] tracking-widest mb-3">{t.existingFolders}</label>
-                <button 
-                  onClick={() => updateArticle(folderModalArticle._id, { folder: 'Inbox' })}
-                  className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 transition-colors ${folderModalArticle.folder === 'Inbox' ? 'bg-blue-600 text-white' : 'bg-[var(--bg-main)] hover:bg-[var(--border-color)]'}`}
-                >
-                  <Folder className="w-4 h-4" /> {t.inbox}
-                </button>
-                {folders.map(f => (
-                  <button key={f} onClick={() => updateArticle(folderModalArticle._id, { folder: f })} className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 transition-colors ${folderModalArticle.folder === f ? 'bg-blue-600 text-white' : 'bg-[var(--bg-main)] hover:bg-[var(--border-color)]'}`}><Folder className="w-4 h-4" /> {f}</button>
-                ))}
-              </div>
-              <form onSubmit={handleAddFolder}>
-                <label className="block text-sm font-bold text-[var(--text-muted)] tracking-widest mb-2">{t.createNewFolder}</label>
-                <div className="flex gap-2">
-                  <input type="text" placeholder={t.folderName} value={newFolderInput} onChange={(e) => setNewFolderInput(e.target.value)} className="flex-1 px-4 py-3 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl focus:ring-2 focus:ring-blue-600 transition-all outline-none text-[var(--text-main)]" />
-                  <button type="submit" className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"><Plus className="w-6 h-6" /></button>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setFolderModalArticle(null)} />
+            <div className="relative bg-[var(--bg-card)] text-[var(--text-main)] rounded-[2rem] p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 border border-[var(--border-color)]">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h3 className="text-xl font-bold tracking-tight">{t.moveToFolder}</h3>
+                  <p className="text-[var(--text-muted)] text-[11px] font-medium uppercase tracking-wider mt-1">{folderModalArticle.title}</p>
                 </div>
-              </form>
-              <button onClick={() => setFolderModalArticle(null)} className="w-full mt-8 py-3 bg-slate-900 text-white rounded-xl font-bold transition-colors">{t.cancel}</button>
+                <button onClick={() => setFolderModalArticle(null)} className="p-2 hover:bg-[var(--bg-main)] rounded-xl transition-colors text-[var(--text-muted)]">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mt-6">
+                <div className="space-y-1.5 max-h-60 overflow-y-auto mb-6 pr-1 custom-scrollbar">
+                  <button 
+                    onClick={() => { updateArticle(folderModalArticle._id, { folder: 'Inbox' }); setFolderModalArticle(null); }}
+                    className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 transition-all ${folderModalArticle.folder === 'Inbox' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-[var(--bg-main)] hover:bg-[var(--border-color)] text-[var(--text-main)]'}`}
+                  >
+                    <Inbox className={`w-4 h-4 ${folderModalArticle.folder === 'Inbox' ? 'text-white' : 'text-blue-600'}`} /> 
+                    <span className="text-sm font-bold">{t.inbox}</span>
+                  </button>
+                  {folders.map(f => (
+                    <button 
+                      key={f} 
+                      onClick={() => { updateArticle(folderModalArticle._id, { folder: f }); setFolderModalArticle(null); }} 
+                      className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 transition-all ${folderModalArticle.folder === f ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-[var(--bg-main)] hover:bg-[var(--border-color)] text-[var(--text-main)]'}`}
+                    >
+                      <Folder className={`w-4 h-4 ${folderModalArticle.folder === f ? 'text-white' : 'text-blue-600'}`} /> 
+                      <span className="text-sm font-bold">{f}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <form onSubmit={handleAddFolder} className="relative">
+                  <input 
+                    type="text" 
+                    placeholder={t.folderName} 
+                    value={newFolderInput} 
+                    onChange={(e) => setNewFolderInput(e.target.value)} 
+                    className="w-full pl-4 pr-12 py-3 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-2xl focus:ring-2 focus:ring-blue-600 transition-all outline-none text-[var(--text-main)] text-sm" 
+                  />
+                  <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-95">
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         )}
