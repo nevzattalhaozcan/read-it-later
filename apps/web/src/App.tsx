@@ -1785,36 +1785,52 @@ const App: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="hidden lg:flex items-center gap-3">
-                  <div className={`relative flex items-center transition-all duration-300 ${searchQuery ? 'w-64' : 'w-48 focus-within:w-64'}`}>
-                    <Search className="absolute left-4 w-4 h-4 text-[var(--text-muted)]" />
-                    <input 
-                      type="text" 
-                      className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-sm"
-                      placeholder={t.searchPlaceholder}
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                    />
+                <div className="hidden lg:flex items-center gap-2">
+                  <div ref={searchContainerRef} className="relative flex items-center">
+                    <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isSearchActive ? 'w-64 opacity-100 mr-2' : 'w-0 opacity-0'}`}>
+                      <Search className="absolute left-3 w-4 h-4 text-[var(--text-muted)]" />
+                      <input 
+                        ref={searchInputRef}
+                        type="text" 
+                        className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-sm"
+                        placeholder={t.searchPlaceholder}
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    <button 
+                      onClick={() => { setIsSearchActive(!isSearchActive); setIsAddUrlActive(false); if(!isSearchActive) setTimeout(() => searchInputRef.current?.focus(), 100); }}
+                      className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${isSearchActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-blue-600'}`}
+                    >
+                      <Search className="w-5 h-5" />
+                    </button>
                   </div>
                   
-                  <div className="relative group">
-                    <form onSubmit={handleAdd} className={`relative flex items-center transition-all duration-300 ${newUrl ? 'w-80' : 'w-48 focus-within:w-80'}`}>
-                      <Plus className="absolute left-4 w-4 h-4 text-blue-600" />
+                  <div ref={addUrlContainerRef} className="relative flex items-center">
+                    <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isAddUrlActive ? 'w-80 opacity-100 mr-2' : 'w-0 opacity-0'}`}>
+                      <Plus className="absolute left-3 w-4 h-4 text-blue-600" />
                       <input 
+                        ref={addUrlInputRef}
                         type="url" 
-                        className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-11 pr-20 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-sm"
+                        className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-10 pr-20 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-sm"
                         placeholder={t.urlPlaceholder}
                         value={newUrl}
                         onChange={e => setNewUrl(e.target.value)}
                       />
                       <button 
-                        type="submit"
+                        onClick={(e) => { e.preventDefault(); handleAdd(e); }}
                         disabled={isAdding || !newUrl}
                         className="absolute right-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all"
                       >
                         {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t.save}
                       </button>
-                    </form>
+                    </div>
+                    <button 
+                      onClick={() => { setIsAddUrlActive(!isAddUrlActive); setIsSearchActive(false); if(!isAddUrlActive) setTimeout(() => addUrlInputRef.current?.focus(), 100); }}
+                      className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${isAddUrlActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-blue-600'}`}
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1826,17 +1842,26 @@ const App: React.FC = () => {
                   <div className="">{highlightsContent}</div>
                 ) : (
                   filteredArticles.map((article) => (
-                    <div key={article._id} onClick={() => setSelectedArticle(article)} className="group bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl shadow-sm border border-[var(--border-color)] hover:border-blue-600/30 hover:shadow-xl transition-all cursor-pointer relative theme-transition flex flex-col sm:flex-row gap-6 overflow-visible w-full">
-                      {/* Card Content ... */}
-                      <div className="flex-1 min-w-0 mb-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-600/5 px-2 py-0.5 rounded-full">{article.siteName || 'link'}</span>
-                          <div className="relative">
-                            <button onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === article._id ? null : article._id); }} className="p-1 hover:bg-[var(--bg-main)] rounded-lg text-[var(--text-muted)] transition-colors">
+                    <div key={article._id} onClick={() => setSelectedArticle(article)} className="group bg-[var(--bg-card)] p-5 sm:p-7 rounded-[2rem] shadow-sm border border-[var(--border-color)] hover:border-blue-600/30 hover:shadow-xl transition-all cursor-pointer relative theme-transition flex flex-col sm:flex-row gap-6 overflow-visible w-full">
+                      {/* Card Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4 mb-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-3 mb-2 flex-wrap">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-600/5 px-2.5 py-1 rounded-lg">{article.siteName || 'link'}</span>
+                              <span className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                                <Clock className="w-3 h-3" /> {article.readingTimeMinutes} {t.minRead}
+                              </span>
+                            </div>
+                            <h2 className="text-xl font-bold group-hover:text-blue-600 transition-colors leading-tight line-clamp-2">{article.title}</h2>
+                          </div>
+                          
+                          <div className="relative shrink-0">
+                            <button onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === article._id ? null : article._id); }} className="w-9 h-9 flex items-center justify-center hover:bg-[var(--bg-main)] rounded-xl text-[var(--text-muted)] transition-colors">
                               <MoreHorizontal className="w-5 h-5" />
                             </button>
                             {activeMenuId === article._id && (
-                              <div className="absolute right-0 mt-2 w-52 glass rounded-2xl shadow-2xl z-[100] py-2 animate-in zoom-in-95 duration-100 origin-top-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="absolute right-0 mt-2 w-52 glass rounded-2xl shadow-2xl z-[100] py-2 animate-in zoom-in-95 duration-100 origin-top-right border border-[var(--border-color)]" onClick={(e) => e.stopPropagation()}>
                                 <button onClick={() => setEditArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Edit3 className="w-4 h-4 text-[var(--text-muted)]" /> {t.editArticle}</button>
                                 <button onClick={() => setTagModalArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Tag className="w-4 h-4 text-[var(--text-muted)]" /> {t.manageTags}</button>
                                 <button onClick={() => setFolderModalArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Move className="w-4 h-4 text-[var(--text-muted)]" /> {t.moveToFolder}</button>
@@ -1847,16 +1872,19 @@ const App: React.FC = () => {
                             )}
                           </div>
                         </div>
-                        <h2 className="text-lg font-bold mb-2 group-hover:text-blue-600 transition-colors leading-tight line-clamp-2">{article.title}</h2>
-                        <p className="text-[var(--text-muted)] text-xs line-clamp-2 leading-relaxed opacity-70">{article.description}</p>
-                      </div>
-                      <div className="mt-auto pt-4 flex items-center justify-between border-t border-[var(--border-color)]">
-                        <div className="flex items-center gap-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-wider">
-                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {article.readingTimeMinutes} {t.minRead}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {article.isFavorite && <Star className="w-3.5 h-3.5 text-amber-500 fill-current" />}
-                          {article.isArchived && <Archive className="w-3.5 h-3.5 text-slate-400" />}
+                        
+                        <p className="text-[var(--text-muted)] text-sm line-clamp-2 leading-relaxed opacity-80 mb-4">{article.description}</p>
+                        
+                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-[var(--border-color)]/50">
+                          <div className="flex items-center gap-2">
+                            {article.isFavorite && <div className="p-1 rounded-lg bg-amber-500/10 text-amber-500"><Star className="w-3 h-3 fill-current" /></div>}
+                            {article.isArchived && <div className="p-1 rounded-lg bg-slate-500/10 text-slate-500"><Archive className="w-3 h-3" /></div>}
+                            <div className="flex gap-1">
+                              {article.tags.slice(0, 3).map(tag => (
+                                <span key={tag} className="text-[10px] font-bold px-2 py-0.5 bg-[var(--bg-main)] text-[var(--text-muted)] rounded-md border border-[var(--border-color)]">#{tag}</span>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
