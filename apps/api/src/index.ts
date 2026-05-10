@@ -216,18 +216,25 @@ api.post('/translate', async (c) => {
   }
 
   const normalizedTarget = typeof target === 'string' && ['tr', 'en'].includes(target) ? target : 'tr';
-  const libreTranslateUrl = (process.env.LIBRETRANSLATE_URL || 'https://de.libretranslate.com/translate').replace(/\/$/, '');
+  const configuredUrl = (process.env.LIBRETRANSLATE_URL || 'https://de.libretranslate.com/translate').replace(/\/$/, '');
+  const libreTranslateUrl = configuredUrl.endsWith('/translate') ? configuredUrl : `${configuredUrl}/translate`;
+  const libreTranslateApiKey = process.env.LIBRETRANSLATE_API_KEY;
 
   try {
+    const payload: Record<string, string> = {
+      q: text.trim(),
+      source: typeof source === 'string' && source ? source : 'auto',
+      target: normalizedTarget,
+      format: 'text',
+    };
+    if (libreTranslateApiKey) {
+      payload.api_key = libreTranslateApiKey;
+    }
+
     const response = await fetch(libreTranslateUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({
-        q: text.trim(),
-        source: typeof source === 'string' && source ? source : 'auto',
-        target: normalizedTarget,
-        format: 'text',
-      })
+      body: JSON.stringify(payload)
     });
 
     const rawBody = await response.text();
@@ -252,6 +259,10 @@ api.post('/translate', async (c) => {
           .replace(/&#39;/g, "'")
           .replace(/&quot;/g, '"')
       : '';
+
+    if (!decodedText.trim()) {
+      return c.json({ error: 'Translation provider returned an empty result. Check LIBRETRANSLATE_URL and LIBRETRANSLATE_API_KEY.' }, 502);
+    }
 
     return c.json({ translatedText: decodedText, target: normalizedTarget });
   } catch (error) {
