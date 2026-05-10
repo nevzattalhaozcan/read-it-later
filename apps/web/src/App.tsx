@@ -143,21 +143,29 @@ const App: React.FC = () => {
   const [widthIdx, setWidthIdx] = useState(1);
   const deepLinkApplied = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchInputMobileRef = useRef<HTMLInputElement>(null);
   const addUrlInputRef = useRef<HTMLInputElement>(null);
+  const addUrlInputMobileRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchContainerMobileRef = useRef<HTMLDivElement>(null);
   const addUrlContainerRef = useRef<HTMLDivElement>(null);
+  const addUrlContainerMobileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Node;
       
       // Handle Search Outside Click
-      if (isSearchActive && searchContainerRef.current && !searchContainerRef.current.contains(target)) {
+      const isInsideSearch = (searchContainerRef.current && searchContainerRef.current.contains(target)) || 
+                            (searchContainerMobileRef.current && searchContainerMobileRef.current.contains(target));
+      if (isSearchActive && !isInsideSearch) {
         setIsSearchActive(false);
       }
       
       // Handle Add URL Outside Click
-      if (isAddUrlActive && addUrlContainerRef.current && !addUrlContainerRef.current.contains(target)) {
+      const isInsideAddUrl = (addUrlContainerRef.current && addUrlContainerRef.current.contains(target)) ||
+                             (addUrlContainerMobileRef.current && addUrlContainerMobileRef.current.contains(target));
+      if (isAddUrlActive && !isInsideAddUrl) {
         setIsAddUrlActive(false);
         setUrlError(null);
       }
@@ -1756,12 +1764,12 @@ const App: React.FC = () => {
             )}
 
             <div className="flex-1 flex items-center justify-end gap-2 lg:hidden min-w-0">
-              <div ref={searchContainerRef} className={`relative flex items-center transition-all duration-300 ${isSearchActive ? 'flex-1' : ''}`} onClick={e => e.stopPropagation()}>
+              <div ref={searchContainerMobileRef} className={`relative flex items-center transition-all duration-300 ${isSearchActive ? 'flex-1' : ''}`} onClick={e => e.stopPropagation()}>
                 <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isSearchActive ? 'w-full opacity-100' : 'w-0 opacity-0'}`}>
                   <div className="relative w-full">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
                     <input 
-                      ref={searchInputRef}
+                      ref={searchInputMobileRef}
                       type="text" 
                       className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2.5 pl-11 pr-4 text-sm outline-none focus:border-blue-600/30 transition-all shadow-sm"
                       placeholder={t.searchPlaceholder}
@@ -1773,7 +1781,7 @@ const App: React.FC = () => {
                 </div>
                 {!isSearchActive && !isAddUrlActive && (
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setIsSearchActive(true); setIsAddUrlActive(false); setTimeout(() => searchInputRef.current?.focus(), 100); }}
+                    onClick={(e) => { e.stopPropagation(); setIsSearchActive(true); setIsAddUrlActive(false); setTimeout(() => { searchInputRef.current?.focus(); searchInputMobileRef.current?.focus(); }, 100); }}
                     className="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] shadow-sm active:scale-95"
                   >
                     <Search className="w-5 h-5" />
@@ -1781,12 +1789,12 @@ const App: React.FC = () => {
                 )}
               </div>
 
-              <div ref={addUrlContainerRef} className={`relative flex items-center transition-all duration-300 ${isAddUrlActive ? 'flex-1' : ''}`} onClick={e => e.stopPropagation()}>
+              <div ref={addUrlContainerMobileRef} className={`relative flex items-center transition-all duration-300 ${isAddUrlActive ? 'flex-1' : ''}`} onClick={e => e.stopPropagation()}>
                 <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isAddUrlActive ? 'w-full opacity-100' : 'w-0 opacity-0'}`}>
                   <div className="relative w-full">
                     <Plus className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-600" />
                     <input 
-                      ref={addUrlInputRef}
+                      ref={addUrlInputMobileRef}
                       type="url" 
                       className={`w-full bg-[var(--bg-card)] border ${urlError ? 'border-red-500' : 'border-[var(--border-color)]'} rounded-2xl py-2.5 pl-11 pr-24 text-sm outline-none focus:border-blue-600/30 transition-all shadow-sm`}
                       placeholder={t.urlPlaceholder}
@@ -1810,7 +1818,7 @@ const App: React.FC = () => {
                 </div>
                 {!isAddUrlActive && !isSearchActive && (
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setIsAddUrlActive(true); setIsSearchActive(false); setTimeout(() => addUrlInputRef.current?.focus(), 100); }}
+                    onClick={(e) => { e.stopPropagation(); setIsAddUrlActive(true); setIsSearchActive(false); setTimeout(() => { addUrlInputRef.current?.focus(); addUrlInputMobileRef.current?.focus(); }, 100); }}
                     className="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] shadow-sm active:scale-95"
                   >
                     <Plus className="w-5 h-5" />
@@ -1861,7 +1869,7 @@ const App: React.FC = () => {
                     </div>
                     {!isSearchActive && (
                       <button 
-                        onClick={(e) => { e.stopPropagation(); setIsSearchActive(true); setIsAddUrlActive(false); setTimeout(() => searchInputRef.current?.focus(), 100); }}
+                        onClick={(e) => { e.stopPropagation(); setIsSearchActive(true); setIsAddUrlActive(false); setTimeout(() => { searchInputRef.current?.focus(); searchInputMobileRef.current?.focus(); }, 100); }}
                         className="w-10 h-10 flex items-center justify-center rounded-2xl transition-all shrink-0 bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-blue-600 shadow-sm active:scale-95"
                       >
                         <Search className="w-5 h-5" />
@@ -1898,7 +1906,7 @@ const App: React.FC = () => {
                     </div>
                     {!isAddUrlActive && (
                       <button 
-                        onClick={(e) => { e.stopPropagation(); setIsAddUrlActive(true); setIsSearchActive(false); setTimeout(() => addUrlInputRef.current?.focus(), 100); }}
+                        onClick={(e) => { e.stopPropagation(); setIsAddUrlActive(true); setIsSearchActive(false); setTimeout(() => { addUrlInputRef.current?.focus(); addUrlInputMobileRef.current?.focus(); }, 100); }}
                         className="w-10 h-10 flex items-center justify-center rounded-2xl transition-all shrink-0 bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-blue-600 shadow-sm active:scale-95"
                       >
                         <Plus className="w-5 h-5" />
