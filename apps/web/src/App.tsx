@@ -4,7 +4,7 @@ import {
   ChevronRight, X, CheckCircle2, AlertCircle, Info, Tag, Folder,
   Inbox, Star, Search, MoreVertical,
   Archive, Check, MoreHorizontal, Edit3, Save, XCircle,
-  Move, Sun, Moon, Highlighter, MessageSquarePlus,
+  Move, Sun, Moon, Coffee, Highlighter, MessageSquarePlus,
   StickyNote, ChevronDown, Settings, LogOut, Key
 } from 'lucide-react';
 import { translations, Lang } from './i18n';
@@ -1008,8 +1008,8 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-[var(--bg-main)] font-sans text-[var(--text-main)] selection:bg-blue-100 flex theme-transition">
         <aside className="hidden lg:flex w-72 bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] flex-col sticky top-0 h-screen p-6">
           <div className="mb-12 flex items-center justify-between px-1">
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-16 w-auto object-contain rounded-xl shadow-md border border-[var(--border-color)]" />
-            <div className="flex items-center gap-1.5">
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-12 w-auto object-contain rounded-xl shadow-md border border-[var(--border-color)]" />
+            <div className="flex items-center gap-2">
               <button 
                 onClick={toggleLang}
                 className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm text-xs font-bold"
@@ -1022,7 +1022,7 @@ const App: React.FC = () => {
                 className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
                 title={theme === 'light' ? t.themeLight : theme === 'dark' ? t.themeDark : 'System'}
               >
-                {theme === 'light' ? <Sun className="w-4 h-4" /> : theme === 'dark' ? <Moon className="w-4 h-4" /> : <Settings className="w-4 h-4" />}
+                {theme === 'light' ? <Sun className="w-4 h-4" /> : theme === 'dark' ? <Moon className="w-4 h-4" /> : <Coffee className="w-4 h-4" />}
               </button>
               <button 
                 onClick={() => setIsSettingsOpen(true)}
