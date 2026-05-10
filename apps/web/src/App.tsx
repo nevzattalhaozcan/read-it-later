@@ -743,7 +743,7 @@ const App: React.FC = () => {
         <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
           {authMode === 'register' && (
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t.name}</label>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.name}</label>
               <input 
                 type="text" 
                 required
@@ -754,7 +754,7 @@ const App: React.FC = () => {
             </div>
           )}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t.email}</label>
+            <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.email}</label>
             <input 
               type="email" 
               required
@@ -764,7 +764,7 @@ const App: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t.password}</label>
+            <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.password}</label>
             <input 
               type="password" 
               required
