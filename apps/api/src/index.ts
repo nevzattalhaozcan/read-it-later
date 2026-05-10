@@ -25,6 +25,39 @@ type Variables = {
 
 const app = new Hono<{ Variables: Variables }>();
 
+// Simple in-memory rate limiting / throttling (note: single-process only)
+const RATE_LIMITS = {
+  OTP_EMAIL_INTERVAL_MS: Number(process.env.OTP_EMAIL_INTERVAL_MS) || 60 * 1000, // 1 per minute per email
+  OTP_EMAIL_PER_HOUR: Number(process.env.OTP_EMAIL_PER_HOUR) || 5,
+  OTP_IP_PER_HOUR: Number(process.env.OTP_IP_PER_HOUR) || 20,
+  VERIFY_ATTEMPTS_PER_HOUR: Number(process.env.VERIFY_ATTEMPTS_PER_HOUR) || 10,
+  WINDOW_MS: 60 * 60 * 1000,
+};
+
+const lastOtpSentByEmail = new Map<string, number>();
+const otpCountByEmailWindow = new Map<string, { count: number; windowStart: number }>();
+const otpCountByIpWindow = new Map<string, { count: number; windowStart: number }>();
+const verifyAttemptsByEmail = new Map<string, { count: number; windowStart: number }>();
+
+function getClientIp(c: any) {
+  const xf = c.req.header('x-forwarded-for') || c.req.header('X-Real-IP') || c.req.header('cf-connecting-ip');
+  if (xf) return String(xf).split(',')[0].trim();
+  try { return c.req.raw?.socket?.remoteAddress || 'unknown'; } catch { return 'unknown'; }
+}
+
+function incrementWindow(map: Map<string, { count: number; windowStart: number }>, key: string, windowMs: number) {
+  const now = Date.now();
+  const rec = map.get(key);
+  if (!rec || rec.windowStart + windowMs < now) {
+    map.set(key, { count: 1, windowStart: now });
+    return 1;
+  }
+  rec.count += 1;
+  map.set(key, rec);
+  return rec.count;
+}
+
+
 // Middlewares
 app.use('*', cors({
   origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
@@ -124,13 +157,34 @@ app.post('/api/v1/auth/send-otp', async (c) => {
   await connectDB();
   const { email, purpose } = await c.req.json();
   if (!email || !purpose) return c.json({ error: 'Email and purpose are required' }, 400);
-
+  // Rate-limit checks
   try {
+    const now = Date.now();
+    const emailKey = String(email).trim().toLowerCase();
+    const ip = getClientIp(c) || 'unknown';
+
+    const last = lastOtpSentByEmail.get(emailKey) || 0;
+    if (now - last < RATE_LIMITS.OTP_EMAIL_INTERVAL_MS) {
+      return c.json({ error: 'Too many requests for this email. Try again later.' }, 429);
+    }
+
+    const emailCount = incrementWindow(otpCountByEmailWindow, emailKey, RATE_LIMITS.WINDOW_MS);
+    if (emailCount > RATE_LIMITS.OTP_EMAIL_PER_HOUR) {
+      return c.json({ error: 'Hourly limit reached for this email.' }, 429);
+    }
+
+    const ipCount = incrementWindow(otpCountByIpWindow, ip, RATE_LIMITS.WINDOW_MS);
+    if (ipCount > RATE_LIMITS.OTP_IP_PER_HOUR) {
+      return c.json({ error: 'Hourly limit reached for this IP.' }, 429);
+    }
+
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     const otp = new EmailOTP({ email: email.trim().toLowerCase(), code, purpose, expiresAt });
     await otp.save();
+
+    lastOtpSentByEmail.set(String(email).trim().toLowerCase(), now);
 
     const subject = purpose === 'reset' ? 'Your password reset code' : 'Your verification code';
     const text = `Your one-time code is: ${code}. It expires in 10 minutes.`;
@@ -149,7 +203,14 @@ app.post('/api/v1/auth/verify-otp', async (c) => {
   if (!email || !otp || !purpose) return c.json({ error: 'Missing parameters' }, 400);
 
   try {
-    const record = await EmailOTP.findOne({ email: email.trim().toLowerCase(), code: otp, purpose, used: false, expiresAt: { $gt: new Date() } });
+    // Throttle verification attempts per email
+    const emailKey = String(email).trim().toLowerCase();
+    const attempts = incrementWindow(verifyAttemptsByEmail, emailKey, RATE_LIMITS.WINDOW_MS);
+    if (attempts > RATE_LIMITS.VERIFY_ATTEMPTS_PER_HOUR) {
+      return c.json({ error: 'Too many verification attempts. Try again later.' }, 429);
+    }
+
+    const record = await EmailOTP.findOne({ email: emailKey, code: otp, purpose, used: false, expiresAt: { $gt: new Date() } });
     if (!record) return c.json({ error: 'Invalid or expired code' }, 400);
 
     record.used = true;
