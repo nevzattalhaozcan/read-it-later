@@ -1383,30 +1383,37 @@ const App: React.FC = () => {
             </div>
 
             {/* Sağ: açılır menü + üç nokta */}
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-              <div className={`flex items-center gap-0.5 overflow-visible transition-all duration-200 ${isArticleMenuOpen ? 'max-w-[240px] mr-1.5 opacity-100' : 'max-w-0 opacity-0 pointer-events-none'}`}>
-                {/* Aksiyonlar */}
-                <TooltipButton onClick={() => updateArticle(selectedArticle._id, { isFavorite: !selectedArticle.isFavorite })} className={`w-7 h-7 flex items-center justify-center hover:bg-[var(--bg-main)] rounded-lg transition-colors ${selectedArticle.isFavorite ? 'text-amber-500' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`} tooltip={selectedArticle.isFavorite ? t.menuFavoriteOn : t.menuFavorite} placement="bottom">
-                  <Star className={`w-4 h-4 ${selectedArticle.isFavorite ? 'fill-current' : ''}`} />
-                </TooltipButton>
-                <TooltipButton type="button" onClick={() => window.open(selectedArticle.url, '_blank', 'noopener,noreferrer')} tooltip={t.menuSource} className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 hover:bg-[var(--bg-main)] rounded-lg transition-colors" placement="bottom">
-                  <ExternalLink className="w-4 h-4" />
-                </TooltipButton>
-                <TooltipButton onClick={() => { updateArticle(selectedArticle._id, { isArchived: !selectedArticle.isArchived }); setIsArticleMenuOpen(false); }} className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-main)] rounded-lg transition-colors" tooltip={t.menuArchive} placement="bottom">
-                  <Archive className="w-4 h-4" />
-                </TooltipButton>
-                <TooltipButton onClick={() => { handleDelete(selectedArticle._id); setIsArticleMenuOpen(false); }} className="w-7 h-7 flex items-center justify-center text-red-500 hover:bg-red-500/10 rounded-lg transition-colors" tooltip={t.menuDelete} placement="bottom">
-                  <Trash2 className="w-4 h-4" />
-                </TooltipButton>
-              </div>
-              <TooltipButton
-                onClick={() => setIsArticleMenuOpen(o => !o)}
-                className={`w-9 h-9 flex items-center justify-center rounded-xl border transition-all ${isArticleMenuOpen ? 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-main)]' : 'border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:border-[var(--border-color)]'}`}
-                tooltip={isArticleMenuOpen ? t.cancel : t.articleActions}
+            <div className="flex items-center gap-1 relative" onClick={(e) => e.stopPropagation()}>
+              <TooltipButton 
+                onClick={() => setIsArticleMenuOpen(!isArticleMenuOpen)}
+                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${isArticleMenuOpen ? 'bg-slate-800 text-white' : 'bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+                tooltip={t.articleActions}
                 placement="bottom"
               >
-                <MoreVertical className="w-5 h-5" />
+                {isArticleMenuOpen ? <X className="w-5 h-5" /> : <MoreVertical className="w-5 h-5" />}
               </TooltipButton>
+
+              {isArticleMenuOpen && (
+                <div className="absolute top-full right-0 mt-2 w-52 glass rounded-2xl shadow-2xl z-50 py-2 animate-in zoom-in-95 slide-in-from-top-2 duration-150 origin-top-right">
+                  <button onClick={() => { updateArticle(selectedArticle._id, { isFavorite: !selectedArticle.isFavorite }); setIsArticleMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium">
+                    <Star className={`w-4 h-4 ${selectedArticle.isFavorite ? 'text-amber-500 fill-current' : 'text-[var(--text-muted)]'}`} /> 
+                    {selectedArticle.isFavorite ? t.removeFavorite : t.favorite}
+                  </button>
+                  <button onClick={() => { window.open(selectedArticle.url, '_blank', 'noopener,noreferrer'); setIsArticleMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium">
+                    <ExternalLink className="w-4 h-4 text-[var(--text-muted)]" /> 
+                    {t.original}
+                  </button>
+                  <button onClick={() => { updateArticle(selectedArticle._id, { isArchived: !selectedArticle.isArchived }); setIsArticleMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium">
+                    <Archive className="w-4 h-4 text-[var(--text-muted)]" /> 
+                    {selectedArticle.isArchived ? t.unarchive : t.archiveArticle}
+                  </button>
+                  <div className="h-px bg-[var(--border-color)] my-2" />
+                  <button onClick={() => { handleDelete(selectedArticle._id); setIsArticleMenuOpen(false); }} className="w-full text-left px-4 py-2 hover:bg-red-500/5 flex items-center gap-2 text-sm font-medium text-red-600">
+                    <Trash2 className="w-4 h-4" /> 
+                    {t.delete}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </nav>
@@ -1692,15 +1699,15 @@ const App: React.FC = () => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col min-w-0 bg-[var(--bg-main)] safe-pb" onClick={() => setActiveMenuId(null)}>
+        <main className="flex-1 flex flex-col min-w-0 bg-[var(--bg-main)] safe-pb relative" onClick={() => setActiveMenuId(null)}>
           {/* Header */}
-          <header className="sticky top-0 z-40 glass border-b border-[var(--border-color)] px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
+          <header className="sticky top-0 z-40 lg:bg-transparent lg:backdrop-blur-none glass border-b lg:border-none border-[var(--border-color)] px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 lg:hidden">
               <img src={`${import.meta.env.BASE_URL}logo.png`} alt="logo" className="h-8 w-auto" />
             </div>
 
-            <div className="flex-1 max-w-2xl relative flex items-center gap-2">
-              <div className={`flex-1 relative flex items-center transition-all duration-300 ${isSearchActive ? 'opacity-100' : 'opacity-0 lg:opacity-100 pointer-events-none lg:pointer-events-auto'}`}>
+            <div className="flex-1 lg:hidden max-w-2xl relative flex items-center gap-2">
+              <div className={`flex-1 relative flex items-center transition-all duration-300 ${isSearchActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                 <Search className="absolute left-4 w-4 h-4 text-[var(--text-muted)]" />
                 <input 
                   ref={searchInputRef}
@@ -1715,7 +1722,7 @@ const App: React.FC = () => {
               {!isSearchActive && (
                 <button 
                   onClick={() => setIsSearchActive(true)}
-                  className="lg:hidden w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)]"
+                  className="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)]"
                 >
                   <Search className="w-5 h-5" />
                 </button>
@@ -1723,21 +1730,21 @@ const App: React.FC = () => {
 
               <div className="relative group flex items-center gap-2">
                 <button 
-                  onClick={() => { setIsAddUrlActive(o => !o); setIsSearchActive(false); setTimeout(() => addUrlInputRef.current?.focus(), 100); }}
+                  onClick={() => { setIsAddUrlActive(o => !o); setIsSearchActive(false); if (!isAddUrlActive) setTimeout(() => addUrlInputRef.current?.focus(), 100); }}
                   className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all shadow-md active:scale-95 ${isAddUrlActive ? 'bg-slate-800 text-white' : 'bg-blue-600 text-white shadow-blue-600/20'}`}
                 >
                   {isAddUrlActive ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                 </button>
                 
                 {isAddUrlActive && (
-                  <div className="absolute top-full right-0 mt-3 w-[calc(100vw-32px)] sm:w-96 glass rounded-3xl p-5 shadow-2xl border border-[var(--border-color)] animate-in fade-in slide-in-from-top-4 duration-300">
-                    <h4 className="text-sm font-bold mb-4 px-1">{t.addNewArticle || 'Add link'}</h4>
-                    <form onSubmit={(e) => { e.preventDefault(); handleAdd(e); setIsAddUrlActive(false); }} className="space-y-3">
+                  <div className="absolute top-full right-0 mt-3 w-[calc(100vw-32px)] sm:w-96 glass rounded-3xl p-4 shadow-2xl border border-[var(--border-color)] animate-in fade-in slide-in-from-top-4 duration-300">
+                    <form onSubmit={(e) => { e.preventDefault(); handleAdd(e); setIsAddUrlActive(false); }} className="relative flex items-center">
+                      <Plus className="absolute left-4 w-4 h-4 text-blue-600" />
                       <input 
                         ref={addUrlInputRef}
                         type="url" 
                         autoFocus
-                        className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl py-3 px-4 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all"
+                        className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] rounded-2xl py-2.5 pl-11 pr-24 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all"
                         placeholder={t.urlPlaceholder}
                         value={newUrl}
                         onChange={e => setNewUrl(e.target.value)}
@@ -1745,9 +1752,9 @@ const App: React.FC = () => {
                       <button 
                         type="submit"
                         disabled={isAdding || !newUrl}
-                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98]"
+                        className="absolute right-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all"
                       >
-                        {isAdding ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t.save}
+                        {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : t.save}
                       </button>
                     </form>
                   </div>
@@ -1755,8 +1762,8 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex sm:hidden lg:hidden items-center gap-3">
-              <button onClick={openSettingsPage} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">
+            <div className="flex lg:hidden items-center gap-3">
+              <button onClick={openSettingsPage} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all shadow-sm">
                 <Settings className="w-5 h-5" />
               </button>
             </div>
@@ -1764,9 +1771,9 @@ const App: React.FC = () => {
 
           <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8">
             <div className="max-w-4xl mx-auto">
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
                 <div>
-                  <h1 className="text-2xl font-black tracking-tight text-[var(--text-main)] mb-1">
+                  <h1 className="text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">
                     {activeFilter.type === 'all' ? t.inbox : 
                      activeFilter.type === 'favorite' ? t.favorites :
                      activeFilter.type === 'archive' ? t.archive :
@@ -1777,16 +1784,49 @@ const App: React.FC = () => {
                     {numToWords(filteredArticles.length, lang)} {t.articles}
                   </p>
                 </div>
+
+                <div className="hidden lg:flex items-center gap-3">
+                  <div className={`relative flex items-center transition-all duration-300 ${searchQuery ? 'w-64' : 'w-48 focus-within:w-64'}`}>
+                    <Search className="absolute left-4 w-4 h-4 text-[var(--text-muted)]" />
+                    <input 
+                      type="text" 
+                      className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-sm"
+                      placeholder={t.searchPlaceholder}
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="relative group">
+                    <form onSubmit={handleAdd} className={`relative flex items-center transition-all duration-300 ${newUrl ? 'w-80' : 'w-48 focus-within:w-80'}`}>
+                      <Plus className="absolute left-4 w-4 h-4 text-blue-600" />
+                      <input 
+                        type="url" 
+                        className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-11 pr-20 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-sm"
+                        placeholder={t.urlPlaceholder}
+                        value={newUrl}
+                        onChange={e => setNewUrl(e.target.value)}
+                      />
+                      <button 
+                        type="submit"
+                        disabled={isAdding || !newUrl}
+                        className="absolute right-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all"
+                      >
+                        {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t.save}
+                      </button>
+                    </form>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+              <div className="flex flex-col gap-4 sm:gap-6">
                 {loading ? (
-                  <div className="col-span-full flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="w-8 h-8 text-blue-600 animate-spin" /><p className="text-[var(--text-muted)] font-medium">{t.loading}</p></div>
+                  <div className="flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="w-8 h-8 text-blue-600 animate-spin" /><p className="text-[var(--text-muted)] font-medium">{t.loading}</p></div>
                 ) : activeFilter.type === 'highlights' ? (
-                  <div className="col-span-full">{highlightsContent}</div>
+                  <div className="">{highlightsContent}</div>
                 ) : (
                   filteredArticles.map((article) => (
-                    <div key={article._id} onClick={() => setSelectedArticle(article)} className="group bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl shadow-sm border border-[var(--border-color)] hover:border-blue-600/30 hover:shadow-xl transition-all cursor-pointer relative theme-transition flex flex-col h-full overflow-hidden">
+                    <div key={article._id} onClick={() => setSelectedArticle(article)} className="group bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl shadow-sm border border-[var(--border-color)] hover:border-blue-600/30 hover:shadow-xl transition-all cursor-pointer relative theme-transition flex flex-col sm:flex-row gap-6 overflow-visible w-full">
                       {/* Card Content ... */}
                       <div className="flex-1 min-w-0 mb-4">
                         <div className="flex items-center justify-between mb-2">
@@ -1850,18 +1890,18 @@ const App: React.FC = () => {
               <span className="text-[10px] font-black uppercase tracking-tight">{t.archive}</span>
             </button>
             <button 
-              onClick={() => { setIsLibraryOpen(true); setIsSettingsOpen(false); setSelectedArticle(null); }}
+              onClick={() => { setActiveFilter({ type: 'folder', value: folders[0] }); setIsLibraryOpen(true); setIsSettingsOpen(false); setSelectedArticle(null); }}
               className={`flex flex-col items-center gap-1 transition-all ${isLibraryOpen ? 'text-blue-600 scale-110' : 'text-[var(--text-muted)]'}`}
             >
               <Folder className="w-5 h-5" />
               <span className="text-[10px] font-black uppercase tracking-tight">{t.library}</span>
             </button>
             <button 
-              onClick={openSettingsPage}
-              className={`flex flex-col items-center gap-1 transition-all ${isSettingsOpen ? 'text-blue-600 scale-110' : 'text-[var(--text-muted)]'}`}
+              onClick={() => { setActiveFilter({ type: 'highlights' }); setIsLibraryOpen(false); setIsSettingsOpen(false); }}
+              className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'highlights' ? 'text-yellow-500 scale-110' : 'text-[var(--text-muted)]'}`}
             >
-              <Settings className="w-5 h-5" />
-              <span className="text-[10px] font-black uppercase tracking-tight">{t.settings}</span>
+              <Highlighter className={`w-5 h-5 ${activeFilter.type === 'highlights' ? 'fill-current' : ''}`} />
+              <span className="text-[10px] font-black uppercase tracking-tight">{t.myNotes}</span>
             </button>
           </nav>
         </main>
@@ -2042,20 +2082,6 @@ const App: React.FC = () => {
                       </button>
                     ))}
                   </div>
-                </section>
-
-                <section>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Highlighter className="w-4 h-4 text-yellow-500" />
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{t.highlights}</h3>
-                  </div>
-                  <button 
-                    onClick={() => { setActiveFilter({ type: 'highlights' }); setIsLibraryOpen(false); }}
-                    className={`w-full flex items-center gap-3 p-4 rounded-2xl border transition-all ${activeFilter.type === 'highlights' ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-600' : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-main)]'}`}
-                  >
-                    <Highlighter className="w-4 h-4" />
-                    <span className="font-semibold">{t.myNotes}</span>
-                  </button>
                 </section>
               </div>
             </div>

@@ -100,6 +100,8 @@ All state lives in the `App` component. Key state variables:
 | `widthIdx` | `0–2` | Article reader column width index |
 | `isSearchActive` | `boolean` | Search bar expanded state |
 | `isAddUrlActive` | `boolean` | Add URL bar expanded state |
+| `isLibraryOpen` | `boolean` | Mobile library (folders/tags) view open state |
+| `isArticleMenuOpen` | `boolean` | Reader view side menu open state |
 
 ---
 
