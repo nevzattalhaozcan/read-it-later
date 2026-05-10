@@ -1,6 +1,6 @@
 import React, { useEffect, useState, createContext, useRef, useCallback } from 'react';
 import {
-  Loader2, ArrowLeft, ExternalLink, Clock, Plus, Bookmark, Trash2,
+  Loader2, ExternalLink, Clock, Plus, Bookmark, Trash2,
   ChevronRight, X, CheckCircle2, AlertCircle, Info, Tag, Folder,
   Inbox, Star, Search, MoreVertical,
   Archive, Check, MoreHorizontal, Edit3, Save, XCircle,
@@ -47,6 +47,19 @@ interface UIContextType {
 }
 
 const UIContext = createContext<UIContextType | null>(null);
+
+interface TooltipButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  tooltip: string;
+}
+
+const TooltipButton: React.FC<TooltipButtonProps> = ({ tooltip, className = '', children, ...props }) => (
+  <span className="group relative inline-flex">
+    <button {...props} className={className} />
+    <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+      {tooltip}
+    </span>
+  </span>
+);
 
 // --- Main App Component ---
 const App: React.FC = () => {
@@ -440,31 +453,43 @@ const App: React.FC = () => {
   }, []);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+
     const selection = window.getSelection();
-    let text = selection?.toString() || '';
-    let highlightId: string | null | undefined;
-
-    // Check if clicked on a highlight even if no selection
-    const target = e.target as HTMLElement;
-    const highlightElement = target.closest('mark[data-highlight-id]');
-    if (highlightElement && !text) {
-      text = highlightElement.textContent || '';
-    }
-    if (highlightElement) {
-      highlightId = highlightElement.getAttribute('data-highlight-id');
+    const text = selection?.toString().trim() || '';
+    if (!selection || selection.isCollapsed || !text || !articleContentRef.current || !selection.rangeCount) {
+      setContextMenu(null);
+      return;
     }
 
-    if (text.trim()) {
-      e.preventDefault();
-      setContextMenu({
-        x: e.clientX,
-        y: e.clientY,
-        text: text.trim(),
-        highlightId
-      });
-      setHighlightToolbar(null);
-      setActiveHighlightPopover(null);
+    const range = selection.getRangeAt(0);
+    const commonAncestor = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer
+      : range.commonAncestorContainer.parentElement;
+
+    if (!commonAncestor || !articleContentRef.current.contains(commonAncestor)) {
+      setContextMenu(null);
+      return;
     }
+
+    const context = captureSelectionContext(articleContentRef.current, selection);
+    if (!context || isAlreadyHighlighted(selectedArticle?.highlights || [], context.startOffset, context.text)) {
+      setContextMenu(null);
+      return;
+    }
+
+    const target = e.target;
+    const elementTarget = target instanceof Element ? target : null;
+    const highlightElement = elementTarget?.closest('mark[data-highlight-id]');
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      text: context.text,
+      highlightId: highlightElement?.getAttribute('data-highlight-id') || null
+    });
+    setHighlightToolbar(null);
+    setActiveHighlightPopover(null);
   }, []);
 
   const buildHighlightLink = (articleId: string, highlightId: string) => {
@@ -932,70 +957,75 @@ const App: React.FC = () => {
       }}>
         <nav className="sticky top-0 bg-[var(--bg-card)]/80 backdrop-blur-md border-b border-[var(--border-color)] z-10">
           <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between relative">
-            {/* Sol: Logo (Geri Butonu Görevi Görür) */}
-            <button onClick={() => { setSelectedArticle(null); setHighlightToolbar(null); setActiveHighlightPopover(null); setIsArticleMenuOpen(false); }} className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors hover:opacity-80">
-              <ArrowLeft className="w-5 h-5" />
-              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-7 w-auto object-contain hidden sm:block" />
-            </button>
+            {/* Sol: Logo (geri dön) */}
+            <TooltipButton
+              onClick={() => { setSelectedArticle(null); setHighlightToolbar(null); setActiveHighlightPopover(null); setIsArticleMenuOpen(false); }}
+              tooltip={t.back}
+              className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors hover:opacity-80"
+            >
+              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-10 w-auto object-contain sm:h-12" />
+            </TooltipButton>
 
             {/* Orta: Tema ve Font Boyutu (Sabit) */}
             <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
               <div className="flex items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
-                <button onClick={() => setFontSizeIdx(i => Math.max(0, i - 1))} disabled={fontSizeIdx === 0} className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[12px] disabled:opacity-30">A−</button>
+                <TooltipButton onClick={() => setFontSizeIdx(i => Math.max(0, i - 1))} disabled={fontSizeIdx === 0} tooltip={t.decreaseFontSize} className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[12px] disabled:opacity-30">A−</TooltipButton>
                 <div className="w-px h-4 bg-[var(--border-color)] mx-0.5" />
-                <button onClick={() => setFontSizeIdx(i => Math.min(4, i + 1))} disabled={fontSizeIdx === 4} className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[14px] disabled:opacity-30">A+</button>
+                <TooltipButton onClick={() => setFontSizeIdx(i => Math.min(4, i + 1))} disabled={fontSizeIdx === 4} tooltip={t.increaseFontSize} className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[14px] disabled:opacity-30">A+</TooltipButton>
               </div>
-              <button 
-                onClick={toggleTheme}
-                className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
-                title={theme === 'light' ? t.themeLight : theme === 'dark' ? t.themeDark : 'System'}
-              >
-                {theme === 'light' ? <Sun className="w-4 h-4" /> : theme === 'dark' ? <Moon className="w-4 h-4" /> : <Coffee className="w-4 h-4" />}
-              </button>
-            </div>
-
-            {/* Sağ: açılır menü + üç nokta */}
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-              <div className={`flex items-center gap-0.5 overflow-hidden transition-all duration-200 ${isArticleMenuOpen ? 'max-w-[400px] mr-1.5 opacity-100' : 'max-w-0 opacity-0 pointer-events-none'}`}>
-                {/* Genişlik: dar / orta / geniş */}
+              <div className="flex items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
                 {([
                   [4,10, 4,10, 4, 8],
                   [2,12, 2,12, 2, 9],
                   [0,14, 0,14, 0,11],
                 ] as [number,number,number,number,number,number][]).map(([x1a,x2a,x1b,x2b,x1c,x2c], wi) => (
-                  <button
+                  <TooltipButton
                     key={wi}
                     onClick={() => setWidthIdx(wi)}
-                    className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${widthIdx === wi ? 'bg-[var(--bg-main)] text-[var(--text-main)]' : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-main)]'}`}
+                    className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${widthIdx === wi ? 'bg-[var(--bg-card)] text-[var(--text-main)]' : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)]'}`}
+                    tooltip={wi === 0 ? t.narrowColumn : wi === 1 ? t.mediumColumn : t.wideColumn}
                   >
                     <svg width="14" height="11" viewBox="0 0 14 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                       <line x1={x1a} y1="1"   x2={x2a} y2="1"/>
                       <line x1={x1b} y1="5.5" x2={x2b} y2="5.5"/>
                       <line x1={x1c} y1="10"  x2={x2c} y2="10"/>
                     </svg>
-                  </button>
+                  </TooltipButton>
                 ))}
-                <div className="w-px h-4 bg-[var(--border-color)] mx-1 shrink-0" />
-                {/* Aksiyonlar */}
-                <button onClick={() => updateArticle(selectedArticle._id, { isFavorite: !selectedArticle.isFavorite })} className={`w-7 h-7 flex items-center justify-center hover:bg-[var(--bg-main)] rounded-lg transition-colors ${selectedArticle.isFavorite ? 'text-amber-500' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>
-                  <Star className={`w-4 h-4 ${selectedArticle.isFavorite ? 'fill-current' : ''}`} />
-                </button>
-                <a href={selectedArticle.url} target="_blank" rel="noopener noreferrer" className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 hover:bg-[var(--bg-main)] rounded-lg transition-colors">
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-                <button onClick={() => { updateArticle(selectedArticle._id, { isArchived: !selectedArticle.isArchived }); setIsArticleMenuOpen(false); }} className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-main)] rounded-lg transition-colors">
-                  <Archive className="w-4 h-4" />
-                </button>
-                <button onClick={() => { handleDelete(selectedArticle._id); setIsArticleMenuOpen(false); }} className="w-7 h-7 flex items-center justify-center text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
-              <button
+              <TooltipButton 
+                onClick={toggleTheme}
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
+                tooltip={theme === 'light' ? t.themeLight : theme === 'dark' ? t.themeDark : 'System'}
+              >
+                {theme === 'light' ? <Sun className="w-4 h-4" /> : theme === 'dark' ? <Moon className="w-4 h-4" /> : <Coffee className="w-4 h-4" />}
+              </TooltipButton>
+            </div>
+
+            {/* Sağ: açılır menü + üç nokta */}
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              <div className={`flex items-center gap-0.5 overflow-hidden transition-all duration-200 ${isArticleMenuOpen ? 'max-w-[240px] mr-1.5 opacity-100' : 'max-w-0 opacity-0 pointer-events-none'}`}>
+                {/* Aksiyonlar */}
+                <TooltipButton onClick={() => updateArticle(selectedArticle._id, { isFavorite: !selectedArticle.isFavorite })} className={`w-7 h-7 flex items-center justify-center hover:bg-[var(--bg-main)] rounded-lg transition-colors ${selectedArticle.isFavorite ? 'text-amber-500' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`} tooltip={selectedArticle.isFavorite ? t.removeFavorite : t.favorite}>
+                  <Star className={`w-4 h-4 ${selectedArticle.isFavorite ? 'fill-current' : ''}`} />
+                </TooltipButton>
+                <TooltipButton type="button" onClick={() => window.open(selectedArticle.url, '_blank', 'noopener,noreferrer')} tooltip={t.original} className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 hover:bg-[var(--bg-main)] rounded-lg transition-colors">
+                  <ExternalLink className="w-4 h-4" />
+                </TooltipButton>
+                <TooltipButton onClick={() => { updateArticle(selectedArticle._id, { isArchived: !selectedArticle.isArchived }); setIsArticleMenuOpen(false); }} className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-main)] rounded-lg transition-colors" tooltip={selectedArticle.isArchived ? t.unarchive : t.archiveArticle}>
+                  <Archive className="w-4 h-4" />
+                </TooltipButton>
+                <TooltipButton onClick={() => { handleDelete(selectedArticle._id); setIsArticleMenuOpen(false); }} className="w-7 h-7 flex items-center justify-center text-red-500 hover:bg-red-500/10 rounded-lg transition-colors" tooltip={t.delete}>
+                  <Trash2 className="w-4 h-4" />
+                </TooltipButton>
+              </div>
+              <TooltipButton
                 onClick={() => setIsArticleMenuOpen(o => !o)}
                 className={`w-9 h-9 flex items-center justify-center rounded-xl border transition-all ${isArticleMenuOpen ? 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-main)]' : 'border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:border-[var(--border-color)]'}`}
+                tooltip={isArticleMenuOpen ? t.cancel : t.articleActions}
               >
                 <MoreVertical className="w-5 h-5" />
-              </button>
+              </TooltipButton>
             </div>
           </div>
         </nav>
@@ -1022,6 +1052,47 @@ const App: React.FC = () => {
           />
         </article>
 
+        {contextMenu && (
+          <div
+            className="fixed z-[180] min-w-64 animate-in fade-in zoom-in-95 duration-150"
+            style={{ top: contextMenu.y + 8, left: contextMenu.x + 8 }}
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <div className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-2xl backdrop-blur-md">
+              <button
+                onClick={handleCopySelection}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
+              >
+                <Copy className="w-4 h-4 text-[var(--text-muted)]" />
+                {t.copy}
+              </button>
+              <button
+                onClick={handleCopyHighlightLink}
+                disabled={!contextMenu.highlightId}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Link2 className="w-4 h-4 text-[var(--text-muted)]" />
+                {t.copyLinkToHighlight}
+              </button>
+              <button
+                onClick={handleSearchGoogle}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
+              >
+                <Search className="w-4 h-4 text-[var(--text-muted)]" />
+                {t.searchGoogleForSelection}
+              </button>
+              <button
+                onClick={handleTranslateSelection}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
+              >
+                <Languages className="w-4 h-4 text-[var(--text-muted)]" />
+                {t.translateSelection}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Note Indicators */}
         {noteIndicators.filter(i => activeHighlightPopover?.id !== i.id).map(indicator => (
           <button 
@@ -1031,47 +1102,6 @@ const App: React.FC = () => {
             onClick={(e) => { e.stopPropagation(); openHighlightAction(indicator.id, { x: indicator.x, y: indicator.y }); }}
             title={t.viewNote}
           >
-
-          {contextMenu && (
-            <div
-              className="fixed z-[180] min-w-64 animate-in fade-in zoom-in-95 duration-150"
-              style={{ top: contextMenu.y + 8, left: contextMenu.x + 8 }}
-              onClick={(e) => e.stopPropagation()}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              <div className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-2xl backdrop-blur-md">
-                <button
-                  onClick={handleCopySelection}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
-                >
-                  <Copy className="w-4 h-4 text-[var(--text-muted)]" />
-                  {t.copy}
-                </button>
-                <button
-                  onClick={handleCopyHighlightLink}
-                  disabled={!contextMenu.highlightId}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Link2 className="w-4 h-4 text-[var(--text-muted)]" />
-                  {t.copyLinkToHighlight}
-                </button>
-                <button
-                  onClick={handleSearchGoogle}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
-                >
-                  <Search className="w-4 h-4 text-[var(--text-muted)]" />
-                  {t.searchGoogleForSelection}
-                </button>
-                <button
-                  onClick={handleTranslateSelection}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
-                >
-                  <Languages className="w-4 h-4 text-[var(--text-muted)]" />
-                  {t.translateSelection}
-                </button>
-              </div>
-            </div>
-          )}
             <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-[var(--bg-card)]/50 backdrop-blur-md border border-[var(--border-color)] shadow-sm group-hover:shadow-md group-hover:border-[var(--note-indicator-color)]/50 group-hover:bg-[var(--bg-card)] transition-all">
               <StickyNote className="w-4 h-4 text-[var(--note-indicator-color)] opacity-70 group-hover:opacity-100 transition-all" />
             </div>
