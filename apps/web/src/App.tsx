@@ -497,22 +497,27 @@ const App: React.FC = () => {
       return;
     }
 
-    const target = e.target;
-    const elementTarget = target instanceof Element ? target : null;
-    const highlightElement = elementTarget?.closest('mark[data-highlight-id]');
-    const highlightedFromSelection = (selectedArticle?.highlights || []).find((h) => {
+    const highlightIdFromContext = (selectedArticle?.highlights || []).find((h) => {
+      if (h.startOffset !== undefined && h.text === context.text && h.startOffset === context.startOffset) {
+        return true;
+      }
+
       const hStart = h.startOffset ?? -1;
       if (hStart < 0) return false;
       const hEnd = hStart + h.text.length;
       const selectionEnd = context.startOffset + context.text.length;
       return context.startOffset >= hStart && selectionEnd <= hEnd;
-    });
+    })?.id || null;
+
+    const target = e.target;
+    const elementTarget = target instanceof Element ? target : null;
+    const highlightElement = elementTarget?.closest('mark[data-highlight-id]');
 
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
       text: context.text,
-      highlightId: highlightElement?.getAttribute('data-highlight-id') || highlightedFromSelection?.id || null
+      highlightId: highlightElement?.getAttribute('data-highlight-id') || highlightIdFromContext
     });
     setTranslationPopover(null);
     setHighlightToolbar(null);
