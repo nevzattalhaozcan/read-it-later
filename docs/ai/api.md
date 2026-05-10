@@ -27,10 +27,11 @@ https://api.sonra-okurum.com  (prod — check vercel.json for actual domain)
 
 ## Auth Strategy
 
-- JWT in `Authorization: Bearer <token>` header
-- Token expiry: 30 days
-- `authMiddleware` is applied to the `api` sub-router (all `/api/v1/*` routes except the 4 public auth ones)
-- Token payload: `{ userId: string }`
+- Hybrid Strategy: Supports both Firebase ID Tokens and legacy JWTs
+- **Firebase Auth:** Main strategy for registration, login, and verification.
+- **Legacy JWT:** Supported for backward compatibility. Token payload: `{ userId: string }`.
+- `authMiddleware` verifies the token (Firebase first, then legacy JWT) and synchronizes the user with MongoDB using `firebaseUid`.
+- `authMiddleware` is applied to all `/api/v1/*` routes except public ones.
 
 ---
 
@@ -41,11 +42,11 @@ https://api.sonra-okurum.com  (prod — check vercel.json for actual domain)
 | Method | Path | Body | Response | Notes |
 |---|---|---|---|---|
 | `GET` | `/` | — | `text` | Health check |
-| `POST` | `/api/v1/auth/register` | `{ email, password, name }` | `{ token, user, requiresVerification }` | Sends OTP email in background. `user` includes `emailVerified: false`. |
-| `POST` | `/api/v1/auth/login` | `{ email, password }` | `{ token, user, requiresVerification?, message? }` | `requiresVerification: true` if user email not verified. |
-| `POST` | `/api/v1/auth/send-otp` | `{ email, purpose: 'verify'\|'reset' }` | `{ success, preview? }` | Rate limited |
-| `POST` | `/api/v1/auth/verify-otp` | `{ email, otp, purpose }` | `{ success }` | Marks user as verified if purpose='verify' |
-| `POST` | `/api/v1/auth/reset-password` | `{ email, otp, newPassword }` | `{ success }` | |
+| `POST` | `/api/v1/auth/register` | `{ email, password, name }` | `{ token, user }` | **DEPRECATED** (Use Firebase SDK on client) |
+| `POST` | `/api/v1/auth/login` | `{ email, password }` | `{ token, user }` | **DEPRECATED** (Use Firebase SDK on client) |
+| `POST` | `/api/v1/auth/send-otp` | `{ email, purpose }` | `{ success }` | **DEPRECATED** (Firebase handles mail) |
+| `POST` | `/api/v1/auth/verify-otp` | `{ email, otp, purpose }` | `{ success }` | **DEPRECATED** |
+| `POST` | `/api/v1/auth/reset-password` | `{ email, otp, newPassword }` | `{ success }` | **DEPRECATED** |
 
 ### Authenticated (Bearer token required)
 
@@ -91,16 +92,16 @@ https://api.sonra-okurum.com  (prod — check vercel.json for actual domain)
 
 ---
 
-## Email / OTP Flow
+**Firebase Flow:**
+1. Client registers/logs in via Firebase SDK.
+2. Firebase sends verification link/reset link.
+3. Client sends ID Token to API.
+4. API verifies token via `admin.auth().verifyIdToken(token)`.
+5. API syncs `firebaseUid` and `emailVerified` with local MongoDB `User` doc.
 
-```
-Register →  save user →  generate OTP  →  sendEmail() in background (non-blocking)
-                         save to EmailOTP collection (TTL: 10 min auto-delete)
-
-Verify  →  findOne({ email, code, purpose:'verify', used:false, expiresAt:{$gt:now} })
-        →  mark used=true
-        →  set user.emailVerified = true
-```
+**Legacy Flow:** (Deprecated)
+1. Register →  save user →  generate OTP  →  sendEmail() in background
+2. Verify  →  findOne({ email, code, purpose:'verify' }) → mark used → set emailVerified=true
 
 - Email transporter is initialized at **server startup** (pre-warmed)
 - If no SMTP env vars → falls back to Ethereal test account (logs preview URL)

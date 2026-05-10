@@ -59,9 +59,10 @@ Embedded in `Article.highlights[]`:
 | Field | Type | Required | Default | Notes |
 |---|---|---|---|---|
 | `email` | `String` | ✅ | — | Unique, lowercase, trimmed |
-| `password` | `String` | ✅ | — | bcrypt-hashed (auto via pre-save hook) |
+| `password` | `String` | — | — | bcrypt-hashed. Optional for Firebase users |
+| `firebaseUid` | `String` | — | — | Unique, sparse index. Syncs with Firebase Auth |
 | `name` | `String` | — | — | Display name |
-| `emailVerified` | `Boolean` | — | `false` | Set to `true` after OTP verification |
+| `emailVerified` | `Boolean` | — | `false` | Set to `true` after Firebase link verification |
 | `createdAt` | `Date` | — | `Date.now` | Also managed by `timestamps: true` |
 
 **Pre-save hook:** Hashes `password` with bcrypt (10 rounds) before saving if modified.

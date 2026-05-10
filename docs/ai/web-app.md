@@ -15,7 +15,7 @@
 ```
 if (!token)
   if (pendingVerificationToken)
-    → <VerificationWall> (OTP verify screen, blocks app access)
+    → <VerificationWall> (Link verification screen, blocks app access)
   else
     → <AuthView>         (login / register / forgot password)
 else if (isSettingsOpen)
@@ -49,15 +49,15 @@ All state lives in the `App` component. Key state variables:
 ### Auth & User
 | State | Type | Purpose |
 |---|---|---|
-| `token` | `string \| null` | JWT token (persisted in localStorage) |
-| `user` | `{ id, email, name?, emailVerified? } \| null` | Logged-in user |
-| `pendingVerificationToken` | `string \| null` | Token held while waiting for OTP (blocks app access) |
+| `token` | `string \| null` | Firebase ID Token (persisted in localStorage) |
+| `user` | `{ id, email, name?, emailVerified? } \| null` | Logged-in user synced from MongoDB |
+| `pendingVerificationToken` | `string \| null` | Firebase ID Token held while waiting for link verification |
 | `authMode` | `'login' \| 'register'` | Auth form mode toggle |
 | `authForm` | `{ email, password, name }` | Auth form controlled inputs |
 | `authError` | `string \| null` | Auth form error message |
 | `forgotError` | `string \| null` | Forgot password error (separate from authError!) |
 | `forgotOpen` | `boolean` | Forgot password panel visibility |
-| `forgotStep` | `'request' \| 'verify' \| null` | Multi-step forgot password flow |
+| `forgotStep` | `null` | **DEPRECATED** (Firebase handles reset flow) |
 | `registerEmail` | `string` | Email captured at register/login, used for verify screen |
 
 ### Articles & Navigation
@@ -113,11 +113,13 @@ Plain fetch calls. Called on token mount and triggered by WebSocket messages.
 ### `handleLogout()`
 Clears localStorage token, resets all auth/article state.
 
-### Auth Handlers
-- `handleLogin(e)` — validates form, calls `/auth/login`. If unverified, sets `pendingVerificationToken`.
-- `handleRegister(e)` — validates form, calls `/auth/register`. Sets `pendingVerificationToken` (no auto-login).
-- `handleVerifyCode()` — submits OTP. On success, commits `pendingVerificationToken` to `token` and `localStorage`.
-- `handleResendVerify()` — resends OTP to `registerEmail`.
+### Auth Handlers (Firebase)
+- `onAuthStateChanged` — Global listener. Auto-syncs `token` and `pendingVerificationToken`.
+- `handleLogin(e)` — `signInWithEmailAndPassword`. If unverified, sets `pendingVerificationToken`.
+- `handleRegister(e)` — `createUserWithEmailAndPassword`. Sends verification email.
+- `handleVerifyCode()` — `fbUser.reload()`. Checks if `emailVerified` is now true.
+- `handleResendVerify()` — `sendEmailVerification` (Firebase link).
+- `handleRequestReset()` — `sendPasswordResetEmail` (Firebase link).
 
 ---
 
