@@ -631,7 +631,7 @@ const App: React.FC = () => {
 
   const SidebarHeader = () => (
     <div className="mb-12 flex items-center justify-between px-1">
-      <img src="/logo.png" alt="sonra-okurum" className="h-16 w-auto object-contain rounded-xl shadow-md border border-[var(--border-color)]" />
+      <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-16 w-auto object-contain rounded-xl shadow-md border border-[var(--border-color)]" />
       <div className="flex items-center gap-1.5">
         <button 
           onClick={toggleTheme}

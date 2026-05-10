@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node 🔧
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install and Build 🔧
@@ -28,6 +28,7 @@ jobs:
           npm run build:web
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Setup Pages ⚙️
         uses: actions/configure-pages@v4

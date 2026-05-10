@@ -1,5 +1,5 @@
 {
-  "name": "read-it-later",
+  "name": "sonra-okurum",
   "private": true,
   "workspaces": [
     "apps/web",
