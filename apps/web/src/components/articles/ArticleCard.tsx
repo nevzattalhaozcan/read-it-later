@@ -1,6 +1,6 @@
 import React from 'react';
 import { Article } from '../../types/article';
-import { ExternalLink, Clock, Bookmark, Star, Trash2, Check } from 'lucide-react';
+import { Clock, Bookmark, Star, Trash2, Check } from 'lucide-react';
 import { useArticleStore } from '../../store/useArticleStore';
 import { articleApi } from '../../api/articles';
 

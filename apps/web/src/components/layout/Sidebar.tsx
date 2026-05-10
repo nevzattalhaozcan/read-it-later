@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout as LayoutIcon, Inbox, Star, CheckCircle, Tag, Settings, Moon, Sun } from 'lucide-react';
+import { Layout as LayoutIcon, Inbox, Star, CheckCircle, Tag, Moon, Sun } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

@@ -1,11 +1,11 @@
-import React, { useEffect, useState, createContext, useContext, useRef, useCallback } from 'react';
-import { 
-  Loader2, ArrowLeft, ExternalLink, Clock, Plus, Bookmark, Trash2, 
-  ChevronRight, X, CheckCircle2, AlertCircle, Info, Tag, Folder, 
-  Inbox, Star, Hash, Search, Filter, MoreVertical, FolderPlus, 
-  Archive, Check, Heart, MoreHorizontal, Edit3, Save, XCircle,
-  Move, Languages, Sun, Moon, Coffee, Highlighter, MessageSquarePlus,
-  Pencil, Trash, StickyNote, ChevronDown, Eraser
+import React, { useEffect, useState, createContext, useRef, useCallback } from 'react';
+import {
+  Loader2, ArrowLeft, ExternalLink, Clock, Plus, Bookmark, Trash2,
+  ChevronRight, X, CheckCircle2, AlertCircle, Info, Tag, Folder,
+  Inbox, Star, Search, MoreVertical,
+  Archive, Check, MoreHorizontal, Edit3, Save, XCircle,
+  Move, Sun, Moon, Coffee, Highlighter, MessageSquarePlus,
+  StickyNote, ChevronDown
 } from 'lucide-react';
 import { translations, Lang } from './i18n';
 import { Highlight, generateId, captureSelectionContext, applyHighlightsToDOM, isAlreadyHighlighted, mergeOverlappingHighlights, CONTEXT_LENGTH } from './highlights';
@@ -416,10 +416,6 @@ const App: React.FC = () => {
       setActiveHighlightPopover({ ...hl, ...pos });
     }
   }, [selectedArticle]);
-
-  const handleHighlightClick = (highlightId: string) => {
-    openHighlightAction(highlightId);
-  };
 
   const deleteHighlight = (highlightId: string) => {
     if (!selectedArticle) return;
