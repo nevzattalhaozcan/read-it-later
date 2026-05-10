@@ -742,6 +742,7 @@ const App: React.FC = () => {
   const handleTextSelection = useCallback(() => {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+      setHighlightToolbar(null);
       return;
     }
     if (!articleContentRef.current) return;
@@ -760,12 +761,39 @@ const App: React.FC = () => {
 
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
+    
+    // Boundary checks for toolbar
+    const toolbarWidth = 100; // Approx width
+    let x = rect.left + rect.width / 2;
+    let y = rect.top + window.scrollY - 10;
+
+    // Ensure horizontal bounds
+    if (x < toolbarWidth / 2 + 12) x = toolbarWidth / 2 + 12;
+    if (x > window.innerWidth - toolbarWidth / 2 - 12) x = window.innerWidth - toolbarWidth / 2 - 12;
+
     setHighlightToolbar({
-      x: rect.left + rect.width / 2,
-      y: rect.top + window.scrollY - 10,
+      x,
+      y,
       ...context
     });
-  }, []);
+  }, [selectedArticle]);
+
+  // Handle selection changes for mobile more reliably
+  useEffect(() => {
+    if (!selectedArticle) return;
+    
+    let timeoutId: any;
+    const handleSelectionChange = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleTextSelection, 100);
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      clearTimeout(timeoutId);
+    };
+  }, [selectedArticle, handleTextSelection]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     // If left button is still down (selection in progress), don't show context menu
@@ -870,11 +898,18 @@ const App: React.FC = () => {
 
     const sourceText = contextMenu.text;
     const target = lang === 'tr' ? 'tr' : 'en';
-    const popoverPosition = { x: contextMenu.x, y: contextMenu.y };
+    const popoverWidth = Math.min(320, window.innerWidth - 32);
+    let x = contextMenu.x;
+    let y = contextMenu.y;
+
+    if (x + popoverWidth > window.innerWidth) {
+      x = window.innerWidth - popoverWidth - 16;
+    }
+    x = Math.max(16, x);
 
     setTranslationPopover({
-      x: popoverPosition.x,
-      y: popoverPosition.y,
+      x,
+      y,
       sourceText,
       loading: true,
     });
@@ -892,16 +927,16 @@ const App: React.FC = () => {
       }
 
       setTranslationPopover({
-        x: popoverPosition.x,
-        y: popoverPosition.y,
+        x,
+        y,
         sourceText,
         translatedText: data.translatedText || '',
         loading: false,
       });
     } catch (error) {
       setTranslationPopover({
-        x: popoverPosition.x,
-        y: popoverPosition.y,
+        x,
+        y,
         sourceText,
         loading: false,
         error: t.translationFailed,
@@ -997,9 +1032,24 @@ const App: React.FC = () => {
     }
 
     if (pos) {
+      const isMobile = window.innerWidth < 1024;
+      const popoverWidth = 240;
+      
+      // Ensure popover stays within horizontal bounds
+      let x = pos.x;
+      if (isMobile) {
+        // On mobile, try to center or at least keep within screen
+        x = Math.max(popoverWidth / 2 + 10, Math.min(window.innerWidth - popoverWidth / 2 - 10, x));
+      } else {
+        // On desktop, ensure it doesn't go off right edge
+        if (x + popoverWidth > window.innerWidth) {
+          x = window.innerWidth - popoverWidth - 20;
+        }
+      }
+
       setNoteText(hl.note || '');
       setIsInlineEditing(!!hl.note); // Only open in edit mode if it has a note
-      setActiveHighlightPopover({ ...hl, ...pos });
+      setActiveHighlightPopover({ ...hl, ...pos, x });
     }
   }, [selectedArticle]);
 
@@ -1042,7 +1092,8 @@ const App: React.FC = () => {
                 maxBottom = Math.max(maxBottom, rect.bottom);
               });
               const y = (minTop + maxBottom) / 2 + window.scrollY;
-              const x = containerRect.right + 40; // More prominent position to the right
+              const isMobile = window.innerWidth < 1024;
+              const x = isMobile ? containerRect.right - 25 : containerRect.right + 40;
               indicators.push({ id: hl.id, x, y });
             }
           }
@@ -1470,7 +1521,7 @@ const App: React.FC = () => {
             </TooltipButton>
 
             {/* Orta: Tema ve Font Boyutu (Sabit) */}
-            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+            <div className={`absolute left-1/2 -translate-x-1/2 flex items-center gap-2 transition-all duration-300 ${isArticleMenuOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
               <div className="hidden sm:flex items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
                 <TooltipButton onClick={() => setFontSizeIdx(i => Math.max(0, i - 1))} disabled={fontSizeIdx === 0} tooltip={t.decreaseFontSize} placement="bottom" className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[12px] disabled:opacity-30">A−</TooltipButton>
                 <div className="w-px h-4 bg-[var(--border-color)] mx-0.5" />
@@ -1515,7 +1566,7 @@ const App: React.FC = () => {
 
             {/* Sağ: açılır menü + üç nokta */}
             <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-              <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isArticleMenuOpen ? 'max-w-[300px] opacity-100 mr-2' : 'max-w-0 opacity-0 mr-0'}`}>
+              <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isArticleMenuOpen ? 'max-w-[260px] sm:max-w-[300px] opacity-100 mr-2' : 'max-w-0 opacity-0 mr-0'}`}>
                 <div className="flex items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
                   <TooltipButton 
                     onClick={() => { updateArticle(selectedArticle._id, { isFavorite: !selectedArticle.isFavorite }); setIsArticleMenuOpen(false); }} 
