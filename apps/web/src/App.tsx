@@ -8,6 +8,7 @@ import {
   StickyNote, ChevronDown, Settings, LogOut, Key
 } from 'lucide-react';
 import { translations, Lang } from './i18n';
+import { policies } from './policies';
 import { Highlight, generateId, captureSelectionContext, applyHighlightsToDOM, isAlreadyHighlighted, mergeOverlappingHighlights, CONTEXT_LENGTH } from './highlights';
 
 // --- Types ---
@@ -59,6 +60,7 @@ const App: React.FC = () => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activePolicy, setActivePolicy] = useState<'terms' | 'privacy' | null>(null);
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
@@ -815,6 +817,13 @@ const App: React.FC = () => {
             >
               {authMode === 'login' ? t.login : t.register}
             </button>
+            <div className="mt-6 text-center text-[10px] text-slate-500 leading-relaxed px-4">
+              {lang === 'tr' ? (
+                <>Devam ederek <button type="button" onClick={() => setActivePolicy('terms')} className="text-blue-600 hover:underline font-bold">Kullanım Koşulları</button> ve <button type="button" onClick={() => setActivePolicy('privacy')} className="text-blue-600 hover:underline font-bold">Gizlilik Politikası</button>'nı kabul etmiş olursunuz.</>
+              ) : (
+                <>By continuing, you agree to our <button type="button" onClick={() => setActivePolicy('terms')} className="text-blue-600 hover:underline font-bold">Terms of Service</button> and <button type="button" onClick={() => setActivePolicy('privacy')} className="text-blue-600 hover:underline font-bold">Privacy Policy</button>.</>
+              )}
+            </div>
           </form>
         </div>
       </div>
@@ -1362,8 +1371,8 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                  <button className="w-full text-left p-4 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">{t.terms}</button>
-                  <button className="w-full text-left p-4 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">{t.privacy}</button>
+                  <button onClick={() => { setActivePolicy('terms'); setIsSettingsOpen(false); }} className="w-full text-left p-4 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">{t.terms}</button>
+                  <button onClick={() => { setActivePolicy('privacy'); setIsSettingsOpen(false); }} className="w-full text-left p-4 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">{t.privacy}</button>
                 </div>
               </div>
 
@@ -1387,6 +1396,27 @@ const App: React.FC = () => {
               <div className="flex gap-3">
                 <button onClick={() => setConfirmModal(null)} className="flex-1 py-3 bg-[var(--border-color)] hover:bg-[var(--bg-main)] text-[var(--text-main)] rounded-xl font-bold transition-colors">{t.cancel}</button>
                 <button onClick={confirmModal.onConfirm} className={`flex-1 py-3 text-white rounded-xl font-bold transition-all shadow-lg active:scale-95 ${confirmModal.confirmLabel ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' : 'bg-red-600 hover:bg-red-700 shadow-red-200'}`}>{confirmModal.confirmLabel ?? t.delete}</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {activePolicy && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setActivePolicy(null)} />
+            <div className="relative bg-[var(--bg-card)] text-[var(--text-main)] rounded-3xl p-6 md:p-8 max-w-2xl w-full h-full max-h-[85vh] shadow-2xl animate-in zoom-in-95 duration-200 border border-[var(--border-color)] flex flex-col">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-[var(--border-color)]">
+                <h3 className="text-xl font-bold">{activePolicy === 'terms' ? t.terms : t.privacy}</h3>
+                <button onClick={() => setActivePolicy(null)} className="p-2 hover:bg-[var(--bg-main)] rounded-xl transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto pr-2 space-y-4 text-sm leading-relaxed text-[var(--text-muted)] custom-scrollbar whitespace-pre-wrap">
+                {policies[activePolicy][lang]}
+              </div>
+              <div className="mt-6 pt-4 border-t border-[var(--border-color)] flex justify-end">
+                <button onClick={() => setActivePolicy(null)} className="px-6 py-2.5 bg-[var(--text-main)] text-[var(--bg-card)] rounded-xl font-bold transition-transform hover:scale-105 active:scale-95">
+                  {t.done}
+                </button>
               </div>
             </div>
           </div>
