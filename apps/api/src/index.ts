@@ -14,6 +14,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { EmailOTP } from './models/EmailOTP.js';
 import { sendEmail } from './utils/mailer.js';
+import { renderOtpEmail } from './utils/emailTemplates.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -122,7 +123,8 @@ app.post('/api/v1/auth/send-otp', async (c) => {
     const subject = purpose === 'reset' ? 'Your password reset code' : 'Your verification code';
     const text = `Your one-time code is: ${code}. It expires in 10 minutes.`;
 
-    const { preview } = await sendEmail({ to: email, subject, text });
+    const html = renderOtpEmail(code, purpose as any, process.env.APP_NAME || 'sonra-okurum');
+    const { preview } = await sendEmail({ to: email, subject, text, html });
     return c.json({ success: true, preview });
   } catch (error: any) {
     return c.json({ error: 'Failed to send OTP' }, 500);
