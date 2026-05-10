@@ -1708,50 +1708,58 @@ const App: React.FC = () => {
 
             <div className="flex-1 max-w-2xl relative flex items-center justify-end gap-2 pr-2 lg:hidden">
               <div ref={searchContainerRef} className="relative flex items-center">
-                <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isSearchActive ? 'w-[calc(100vw-120px)] sm:w-64 opacity-100 mr-2' : 'w-0 opacity-0'}`}>
-                  <Search className="absolute left-3 w-4 h-4 text-[var(--text-muted)]" />
-                  <input 
-                    ref={searchInputRef}
-                    type="text" 
-                    className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-sm"
-                    placeholder={t.searchPlaceholder}
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                  />
+                <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isSearchActive ? 'w-[calc(100vw-120px)] sm:w-64 opacity-100' : 'w-0 opacity-0'}`}>
+                  <div className="relative w-full mr-2">
+                    <Search className="absolute left-3 w-4 h-4 text-[var(--text-muted)]" />
+                    <input 
+                      ref={searchInputRef}
+                      type="text" 
+                      className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-600/50 transition-all shadow-sm"
+                      placeholder={t.searchPlaceholder}
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setIsSearchActive(!isSearchActive); setIsAddUrlActive(false); if(!isSearchActive) setTimeout(() => searchInputRef.current?.focus(), 100); }}
-                  className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${isSearchActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-blue-600'}`}
-                >
-                  <Search className="w-5 h-5" />
-                </button>
+                {!isSearchActive && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setIsSearchActive(true); setIsAddUrlActive(false); setTimeout(() => searchInputRef.current?.focus(), 100); }}
+                    className="w-10 h-10 flex items-center justify-center rounded-2xl transition-all bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] shadow-sm"
+                  >
+                    <Search className="w-5 h-5" />
+                  </button>
+                )}
               </div>
 
               <div ref={addUrlContainerRef} className="relative flex items-center">
-                <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isAddUrlActive ? 'w-[calc(100vw-120px)] sm:w-80 opacity-100 mr-2' : 'w-0 opacity-0'}`}>
-                  <Plus className="absolute left-3 w-4 h-4 text-blue-600" />
-                  <input 
-                    ref={addUrlInputRef}
-                    type="url" 
-                    className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-10 pr-20 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-sm"
-                    placeholder={t.urlPlaceholder}
-                    value={newUrl}
-                    onChange={e => setNewUrl(e.target.value)}
-                  />
-                  <button 
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAdd(e); setIsAddUrlActive(false); }}
-                    disabled={isAdding || !newUrl}
-                    className="absolute right-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all"
-                  >
-                    {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t.save}
-                  </button>
+                <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isAddUrlActive ? 'w-[calc(100vw-120px)] sm:w-80 opacity-100' : 'w-0 opacity-0'}`}>
+                  <div className="relative w-full mr-2">
+                    <Plus className="absolute left-3 w-4 h-4 text-blue-600" />
+                    <input 
+                      ref={addUrlInputRef}
+                      type="url" 
+                      className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-10 pr-20 text-sm outline-none focus:ring-2 focus:ring-blue-600/50 transition-all shadow-sm"
+                      placeholder={t.urlPlaceholder}
+                      value={newUrl}
+                      onChange={e => setNewUrl(e.target.value)}
+                    />
+                    <button 
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAdd(e); setIsAddUrlActive(false); }}
+                      disabled={isAdding || !newUrl}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all"
+                    >
+                      {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t.save}
+                    </button>
+                  </div>
                 </div>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setIsAddUrlActive(!isAddUrlActive); setIsSearchActive(false); if(!isAddUrlActive) setTimeout(() => addUrlInputRef.current?.focus(), 100); }}
-                  className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${isAddUrlActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-blue-600'}`}
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
+                {!isAddUrlActive && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setIsAddUrlActive(true); setIsSearchActive(false); setTimeout(() => addUrlInputRef.current?.focus(), 100); }}
+                    className="w-10 h-10 flex items-center justify-center rounded-2xl transition-all bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] shadow-sm"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1786,19 +1794,21 @@ const App: React.FC = () => {
                         <input 
                           ref={searchInputRef}
                           type="text" 
-                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-sm"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-600/50 transition-all shadow-sm"
                           placeholder={t.searchPlaceholder}
                           value={searchQuery}
                           onChange={e => setSearchQuery(e.target.value)}
                         />
                       </div>
                     </div>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setIsSearchActive(!isSearchActive); setIsAddUrlActive(false); if(!isSearchActive) setTimeout(() => searchInputRef.current?.focus(), 100); }}
-                      className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all shrink-0 ${isSearchActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-blue-600'}`}
-                    >
-                      <Search className="w-5 h-5" />
-                    </button>
+                    {!isSearchActive && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setIsSearchActive(true); setIsAddUrlActive(false); setTimeout(() => searchInputRef.current?.focus(), 100); }}
+                        className="w-10 h-10 flex items-center justify-center rounded-2xl transition-all shrink-0 bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-blue-600 shadow-sm"
+                      >
+                        <Search className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
                   
                   <div ref={addUrlContainerRef} className="relative flex items-center">
@@ -1808,7 +1818,7 @@ const App: React.FC = () => {
                         <input 
                           ref={addUrlInputRef}
                           type="url" 
-                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-10 pr-20 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-sm"
+                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-10 pr-20 text-sm outline-none focus:ring-2 focus:ring-blue-600/50 transition-all shadow-sm"
                           placeholder={t.urlPlaceholder}
                           value={newUrl}
                           onChange={e => setNewUrl(e.target.value)}
@@ -1822,12 +1832,14 @@ const App: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setIsAddUrlActive(!isAddUrlActive); setIsSearchActive(false); if(!isAddUrlActive) setTimeout(() => addUrlInputRef.current?.focus(), 100); }}
-                      className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all shrink-0 ${isAddUrlActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-blue-600'}`}
-                    >
-                      <Plus className="w-5 h-5" />
-                    </button>
+                    {!isAddUrlActive && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setIsAddUrlActive(true); setIsSearchActive(false); setTimeout(() => addUrlInputRef.current?.focus(), 100); }}
+                        className="w-10 h-10 flex items-center justify-center rounded-2xl transition-all shrink-0 bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-blue-600 shadow-sm"
+                      >
+                        <Plus className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
