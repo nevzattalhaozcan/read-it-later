@@ -39,6 +39,12 @@ const otpCountByEmailWindow = new Map<string, { count: number; windowStart: numb
 const otpCountByIpWindow = new Map<string, { count: number; windowStart: number }>();
 const verifyAttemptsByEmail = new Map<string, { count: number; windowStart: number }>();
 
+const emailRegex = /^[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}$/;
+
+function normalizeEmail(value: unknown): string {
+  return String(value || '').trim().toLowerCase();
+}
+
 function getClientIp(c: any) {
   const xf = c.req.header('x-forwarded-for') || c.req.header('X-Real-IP') || c.req.header('cf-connecting-ip');
   if (xf) return String(xf).split(',')[0].trim();
@@ -103,30 +109,63 @@ app.get('/', (c) => c.text('Read-it-later API is running'));
 app.post('/api/v1/auth/register', async (c) => {
   await connectDB();
   const { email, password, name } = await c.req.json();
+  const normalizedEmail = normalizeEmail(email);
+  const normalizedName = typeof name === 'string' ? name.trim() : '';
   
   try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return c.json({ error: 'Email already exists' }, 400);
+    if (!normalizedName) return c.json({ error: 'Name is required' }, 400);
+    if (!emailRegex.test(normalizedEmail)) return c.json({ error: 'Invalid email' }, 400);
+    if (typeof password !== 'string' || password.trim().length < 6) {
+      return c.json({ error: 'Password must be at least 6 characters' }, 400);
+    }
 
-    const user = new User({ email, password, name });
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      if (existingUser.emailVerified) {
+        return c.json({ error: 'Email already exists' }, 400);
+      }
+
+      try {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        const otp = new EmailOTP({ email: normalizedEmail, code, purpose: 'verify', expiresAt });
+        await otp.save();
+        const subject = 'Your verification code';
+        const text = `Your one-time code is: ${code}. It expires in 10 minutes.`;
+        const html = renderOtpEmail(code, 'verify', process.env.APP_NAME || 'sonra-okurum');
+        try { await sendEmail({ to: normalizedEmail, subject, text, html }); } catch (_) {}
+      } catch (_) {}
+
+      const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
+      const token = jwt.sign({ userId: existingUser._id }, secret, { expiresIn: '30d' });
+
+      return c.json({
+        token,
+        user: { id: existingUser._id, email: existingUser.email, name: existingUser.name },
+        requiresVerification: true,
+        message: 'Account exists but is not verified. We sent a new verification code.'
+      });
+    }
+
+    const user = new User({ email: normalizedEmail, password: password.trim(), name: normalizedName });
     await user.save();
     // Create and send verification OTP automatically after registration
     try {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-      const otp = new EmailOTP({ email: email.trim().toLowerCase(), code, purpose: 'verify', expiresAt });
+      const otp = new EmailOTP({ email: normalizedEmail, code, purpose: 'verify', expiresAt });
       await otp.save();
       const subject = 'Your verification code';
       const text = `Your one-time code is: ${code}. It expires in 10 minutes.`;
       const html = renderOtpEmail(code, 'verify', process.env.APP_NAME || 'sonra-okurum');
       // send email but don't block registration on failure
-      try { await sendEmail({ to: email, subject, text, html }); } catch (_) {}
+      try { await sendEmail({ to: normalizedEmail, subject, text, html }); } catch (_) {}
     } catch (_) {}
 
     const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
     const token = jwt.sign({ userId: user._id }, secret, { expiresIn: '30d' });
 
-    return c.json({ token, user: { id: user._id, email, name } }, 201);
+    return c.json({ token, user: { id: user._id, email: user.email, name: user.name } }, 201);
   } catch (error) {
     return c.json({ error: 'Registration failed' }, 500);
   }
@@ -135,9 +174,11 @@ app.post('/api/v1/auth/register', async (c) => {
 app.post('/api/v1/auth/login', async (c) => {
   await connectDB();
   const { email, password } = await c.req.json();
+  const normalizedEmail = normalizeEmail(email);
 
   try {
-    const user = await User.findOne({ email });
+    if (!emailRegex.test(normalizedEmail)) return c.json({ error: 'Invalid credentials' }, 401);
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) return c.json({ error: 'Invalid credentials' }, 401);
 
     const isMatch = await user.comparePassword(password);

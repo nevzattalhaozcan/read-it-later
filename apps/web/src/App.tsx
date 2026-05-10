@@ -471,9 +471,9 @@ const App: React.FC = () => {
         localStorage.setItem('token', data.token);
         setToken(data.token);
         setUser(data.user);
-        setRegisterEmail(authForm.email);
+        setRegisterEmail(data?.user?.email || authForm.email);
         setVerifyOpen(true);
-        showToast(t.updatedSuccessfully);
+        showToast(data?.message || t.updatedSuccessfully);
       } else {
         setAuthError(data.error || t.errorOccurred || 'Registration failed');
       }
