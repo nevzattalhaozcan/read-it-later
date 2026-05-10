@@ -148,17 +148,28 @@ const App: React.FC = () => {
   const addUrlContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      
+      // Handle Search Outside Click
+      if (isSearchActive && searchContainerRef.current && !searchContainerRef.current.contains(target)) {
         setIsSearchActive(false);
       }
-      if (addUrlContainerRef.current && !addUrlContainerRef.current.contains(event.target as Node)) {
+      
+      // Handle Add URL Outside Click
+      if (isAddUrlActive && addUrlContainerRef.current && !addUrlContainerRef.current.contains(target)) {
         setIsAddUrlActive(false);
+        setUrlError(null);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isSearchActive, isAddUrlActive]);
 
   // --- Auth Effects ---
   useEffect(() => {
@@ -1737,7 +1748,7 @@ const App: React.FC = () => {
         {/* Main Content */}
         <main className="flex-1 flex flex-col min-w-0 bg-[var(--bg-main)] safe-pb relative" onClick={() => setActiveMenuId(null)}>
           {/* Header */}
-          <header className="sticky top-0 z-40 bg-[var(--bg-main)]/80 backdrop-blur-md lg:bg-transparent lg:backdrop-blur-none border-b lg:border-none border-[var(--border-color)] px-4 sm:px-8 py-3 flex items-center justify-between gap-4 transition-colors">
+          <header className="sticky top-0 z-40 bg-[var(--bg-main)]/80 backdrop-blur-md lg:bg-transparent lg:backdrop-blur-none border-b lg:border-none border-[var(--border-color)] px-4 sm:px-8 py-3 flex items-center justify-between gap-4 transition-colors" onClick={e => e.stopPropagation()}>
             {!isSearchActive && !isAddUrlActive && (
               <div className="flex items-center gap-3 lg:hidden">
                 <img src={`${import.meta.env.BASE_URL}logo.png`} alt="logo" className="h-8 w-auto" />
