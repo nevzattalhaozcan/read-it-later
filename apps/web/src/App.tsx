@@ -39,6 +39,7 @@ interface Article {
   highlights: Highlight[];
   matchReason?: string;
   createdAt?: string;
+  byline?: string;
 }
 
 type ToastType = 'success' | 'error' | 'info';
@@ -1145,15 +1146,19 @@ const App: React.FC = () => {
   };
 
   const formatCitation = (article: Article) => {
-    const author = article.siteName || new URL(article.url).hostname;
+    const author = article.byline || article.siteName || new URL(article.url).hostname;
+    const siteName = article.siteName || new URL(article.url).hostname;
     const date = new Date(article.createdAt || Date.now());
     const year = date.getFullYear();
     const month = date.toLocaleString(lang, { month: 'long' });
     const day = date.getDate();
     
-    // Simple APA-ish format: Author. (Year, Month Day). Title. Site Name. URL
-    // Since we don't always have real person author names, we use siteName/domain
-    return `${author}. (${year}, ${month} ${day}). ${article.title}. ${article.url}`;
+    // APA 7: Author, A. A. (Year, Month Day). Title of article. Site Name. URL
+    // If author and siteName are the same, siteName is omitted.
+    if (author === siteName) {
+      return `${author}. (${year}, ${month} ${day}). ${article.title}. ${article.url}`;
+    }
+    return `${author}. (${year}, ${month} ${day}). ${article.title}. ${siteName}. ${article.url}`;
   };
 
   const handleCopyCitations = () => {
@@ -1882,12 +1887,27 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 {!isSearchActive && !isAddUrlActive && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); setIsSearchActive(true); setIsAddUrlActive(false); setTimeout(() => { searchInputRef.current?.focus(); searchInputMobileRef.current?.focus(); }, 100); }}
-                    className="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] shadow-sm active:scale-95"
-                  >
-                    <Search className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setIsSearchActive(true); setIsAddUrlActive(false); setTimeout(() => { searchInputRef.current?.focus(); searchInputMobileRef.current?.focus(); }, 100); }}
+                      className="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] shadow-sm active:scale-95"
+                    >
+                      <Search className="w-5 h-5" />
+                    </button>
+                    {selectedArticleIds.size > 0 && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleCopyCitations(); }}
+                        className="w-10 h-10 flex items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20 active:scale-95 animate-in zoom-in duration-200 relative"
+                      >
+                        <Copy className="w-5 h-5" />
+                        {selectedArticleIds.size > 1 && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-[10px] font-black rounded-full flex items-center justify-center border-2 border-[var(--bg-main)]">
+                            {selectedArticleIds.size}
+                          </span>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -2015,6 +2035,22 @@ const App: React.FC = () => {
                       </button>
                     )}
                   </div>
+
+                  {selectedArticleIds.size > 0 && (
+                    <TooltipButton 
+                      onClick={(e) => { e.stopPropagation(); handleCopyCitations(); }}
+                      className="w-10 h-10 flex items-center justify-center rounded-2xl transition-all shrink-0 bg-blue-600 text-white shadow-lg shadow-blue-600/20 active:scale-95 animate-in zoom-in duration-200"
+                      tooltip={selectedArticleIds.size === 1 ? t.copyCitation : t.copyBibliography}
+                      placement="bottom"
+                    >
+                      <Copy className="w-5 h-5" />
+                      {selectedArticleIds.size > 1 && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-[10px] font-black rounded-full flex items-center justify-center border-2 border-[var(--bg-main)]">
+                          {selectedArticleIds.size}
+                        </span>
+                      )}
+                    </TooltipButton>
+                  )}
                 </div>
               </div>
 
@@ -2149,34 +2185,6 @@ const App: React.FC = () => {
               <span className="text-[10px] font-black uppercase tracking-tight">{t.myNotes}</span>
             </button>
           </nav>
-
-          {/* Citation Action Bar */}
-          {selectedArticleIds.size > 0 && (
-            <div className="fixed bottom-24 lg:bottom-8 left-1/2 -translate-x-1/2 z-[400] animate-in slide-in-from-bottom-8 duration-300">
-              <div className="bg-slate-900 text-white rounded-2xl shadow-2xl px-6 py-4 flex items-center gap-6 border border-slate-800 backdrop-blur-xl bg-opacity-95">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 leading-none mb-1">{selectedArticleIds.size} {t.articlesSelected}</span>
-                  <span className="text-sm font-bold text-white">{selectedArticleIds.size === 1 ? t.citation : t.bibliography}</span>
-                </div>
-                <div className="w-px h-8 bg-slate-800" />
-                <div className="flex gap-2">
-                  <button 
-                    onClick={handleCopyCitations}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-blue-600/20"
-                  >
-                    <Copy className="w-4 h-4" />
-                    {selectedArticleIds.size === 1 ? t.copyCitation : t.copyBibliography}
-                  </button>
-                  <button 
-                    onClick={() => setSelectedArticleIds(new Set())}
-                    className="p-2.5 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </main>
 
 
