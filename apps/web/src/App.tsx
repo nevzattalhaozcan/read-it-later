@@ -705,139 +705,7 @@ const App: React.FC = () => {
     </div>
   );
 
-  const SidebarHeader = () => (
-    <div className="mb-12 flex items-center justify-between px-1">
-      <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-16 w-auto object-contain rounded-xl shadow-md border border-[var(--border-color)]" />
-      <div className="flex items-center gap-1.5">
-        <button 
-          onClick={() => setIsSettingsOpen(true)}
-          className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
-          title={t.settings}
-        >
-          <Settings className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
 
-  const LoginView = () => (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-500">
-        <div className="flex justify-center mb-8">
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-20 w-auto" />
-        </div>
-        
-        <h2 className="text-2xl font-bold text-center text-slate-800 dark:text-slate-100 mb-2">
-          {authMode === 'login' ? t.welcomeBack : t.createAccount}
-        </h2>
-        <p className="text-center text-slate-500 dark:text-slate-400 mb-8 text-sm">
-          {authMode === 'login' ? t.dontHaveAccount : t.alreadyHaveAccount}{' '}
-          <button 
-            onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-            className="text-blue-600 font-semibold hover:underline"
-          >
-            {authMode === 'login' ? t.register : t.login}
-          </button>
-        </p>
-
-        <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
-          {authMode === 'register' && (
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.name}</label>
-              <input 
-                type="text" 
-                required
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white"
-                value={authForm.name}
-                onChange={e => setAuthForm({...authForm, name: e.target.value})}
-              />
-            </div>
-          )}
-          <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.email}</label>
-            <input 
-              type="email" 
-              required
-              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white"
-              value={authForm.email}
-              onChange={e => setAuthForm({...authForm, email: e.target.value})}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.password}</label>
-            <input 
-              type="password" 
-              required
-              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white"
-              value={authForm.password}
-              onChange={e => setAuthForm({...authForm, password: e.target.value})}
-            />
-          </div>
-          <button 
-            type="submit"
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98] mt-4"
-          >
-            {authMode === 'login' ? t.login : t.register}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-
-  const SettingsDrawer = () => (
-    <div className={`fixed inset-0 z-[200] ${isSettingsOpen ? 'visible' : 'invisible'}`} onClick={() => setIsSettingsOpen(false)}>
-      <div className={`fixed inset-y-0 right-0 w-full max-w-sm bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-300 ${isSettingsOpen ? 'translate-x-0' : 'translate-x-full'}`} onClick={e => e.stopPropagation()}>
-        <div className="p-6 h-full flex flex-col">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-bold dark:text-white">{t.settings}</h2>
-            <button onClick={() => setIsSettingsOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
-              <X className="w-5 h-5 dark:text-white" />
-            </button>
-          </div>
-
-          <div className="flex-1 space-y-6">
-            <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
-              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
-                {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <p className="font-bold dark:text-white truncate">{user?.name || 'User'}</p>
-                <p className="text-sm text-slate-500 truncate">{user?.email}</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <button className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors dark:text-white">
-                <Key className="w-5 h-5 text-slate-400" />
-                <span className="font-medium">{t.changePassword}</span>
-              </button>
-              <button onClick={() => { toggleTheme(); }} className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors dark:text-white">
-                {theme === 'light' ? <Moon className="w-5 h-5 text-slate-400" /> : <Sun className="w-5 h-5 text-slate-400" />}
-                <span className="font-medium">{theme === 'light' ? t.themeDark : t.themeLight}</span>
-              </button>
-              <button onClick={() => { toggleLang(); }} className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors dark:text-white text-xs font-bold uppercase tracking-widest">
-                <span className="w-5 text-slate-400 text-center">{lang === 'tr' ? 'EN' : 'TR'}</span>
-                <span className="font-medium">{lang === 'tr' ? 'English' : 'Türkçe'}</span>
-              </button>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
-              <button className="w-full text-left p-4 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">{t.terms}</button>
-              <button className="w-full text-left p-4 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">{t.privacy}</button>
-            </div>
-          </div>
-
-          <button 
-            onClick={() => { handleLogout(); setIsSettingsOpen(false); }}
-            className="w-full flex items-center justify-center gap-2 p-4 mt-4 bg-red-50 dark:bg-red-500/10 text-red-600 font-bold rounded-2xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            {t.logout}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 
   // --- Render Functions ---
 
@@ -847,7 +715,71 @@ const App: React.FC = () => {
     </div>
   );
 
-  if (!token) return <LoginView />;
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+        <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-500">
+          <div className="flex justify-center mb-8">
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-20 w-auto" />
+          </div>
+          
+          <h2 className="text-2xl font-bold text-center text-slate-800 dark:text-slate-100 mb-2">
+            {authMode === 'login' ? t.welcomeBack : t.createAccount}
+          </h2>
+          <p className="text-center text-slate-500 dark:text-slate-400 mb-8 text-sm">
+            {authMode === 'login' ? t.dontHaveAccount : t.alreadyHaveAccount}{' '}
+            <button 
+              onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+              className="text-blue-600 font-semibold hover:underline"
+            >
+              {authMode === 'login' ? t.register : t.login}
+            </button>
+          </p>
+
+          <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
+            {authMode === 'register' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.name}</label>
+                <input 
+                  type="text" 
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white"
+                  value={authForm.name}
+                  onChange={e => setAuthForm({...authForm, name: e.target.value})}
+                />
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.email}</label>
+              <input 
+                type="email" 
+                required
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white"
+                value={authForm.email}
+                onChange={e => setAuthForm({...authForm, email: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.password}</label>
+              <input 
+                type="password" 
+                required
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white"
+                value={authForm.password}
+                onChange={e => setAuthForm({...authForm, password: e.target.value})}
+              />
+            </div>
+            <button 
+              type="submit"
+              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98] mt-4"
+            >
+              {authMode === 'login' ? t.login : t.register}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedArticle) {
     return (
@@ -1075,7 +1007,18 @@ const App: React.FC = () => {
     <UIContext.Provider value={{ showToast, confirm: (msg, cb) => setConfirmModal({ message: msg, onConfirm: cb }), t }}>
       <div className="min-h-screen bg-[var(--bg-main)] font-sans text-[var(--text-main)] selection:bg-blue-100 flex theme-transition">
         <aside className="hidden lg:flex w-72 bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] flex-col sticky top-0 h-screen p-6">
-          <SidebarHeader />
+          <div className="mb-12 flex items-center justify-between px-1">
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-16 w-auto object-contain rounded-xl shadow-md border border-[var(--border-color)]" />
+            <div className="flex items-center gap-1.5">
+              <button 
+                onClick={() => setIsSettingsOpen(true)}
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
+                title={t.settings}
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
           <nav className="space-y-1 flex-1 overflow-y-auto">
             <button onClick={() => setActiveFilter({ type: 'all' })} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-colors ${activeFilter.type === 'all' ? 'bg-blue-600/10 text-blue-600' : 'text-[var(--text-muted)] hover:bg-[var(--bg-main)]'}`}>
               <Inbox className="w-4 h-4" /> {t.inbox}
@@ -1317,7 +1260,58 @@ const App: React.FC = () => {
           ))}
         </div>
 
-        <SettingsDrawer />
+        <div className={`fixed inset-0 z-[200] ${isSettingsOpen ? 'visible' : 'invisible'}`} onClick={() => setIsSettingsOpen(false)}>
+          <div className={`fixed inset-y-0 right-0 w-full max-w-sm bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-300 ${isSettingsOpen ? 'translate-x-0' : 'translate-x-full'}`} onClick={e => e.stopPropagation()}>
+            <div className="p-6 h-full flex flex-col">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-bold dark:text-white">{t.settings}</h2>
+                <button onClick={() => setIsSettingsOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+                  <X className="w-5 h-5 dark:text-white" />
+                </button>
+              </div>
+
+              <div className="flex-1 space-y-6">
+                <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+                  <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
+                    {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold dark:text-white truncate">{user?.name || 'User'}</p>
+                    <p className="text-sm text-slate-500 truncate">{user?.email}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <button className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors dark:text-white">
+                    <Key className="w-5 h-5 text-slate-400" />
+                    <span className="font-medium">{t.changePassword}</span>
+                  </button>
+                  <button onClick={() => { toggleTheme(); }} className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors dark:text-white">
+                    {theme === 'light' ? <Moon className="w-5 h-5 text-slate-400" /> : <Sun className="w-5 h-5 text-slate-400" />}
+                    <span className="font-medium">{theme === 'light' ? t.themeDark : t.themeLight}</span>
+                  </button>
+                  <button onClick={() => { toggleLang(); }} className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors dark:text-white text-xs font-bold uppercase tracking-widest">
+                    <span className="w-5 text-slate-400 text-center">{lang === 'tr' ? 'EN' : 'TR'}</span>
+                    <span className="font-medium">{lang === 'tr' ? 'English' : 'Türkçe'}</span>
+                  </button>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                  <button className="w-full text-left p-4 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">{t.terms}</button>
+                  <button className="w-full text-left p-4 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">{t.privacy}</button>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => { handleLogout(); setIsSettingsOpen(false); }}
+                className="w-full flex items-center justify-center gap-2 p-4 mt-4 bg-red-50 dark:bg-red-500/10 text-red-600 font-bold rounded-2xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
+              >
+                <LogOut className="w-5 h-5" />
+                {t.logout}
+              </button>
+            </div>
+          </div>
+        </div>
         {confirmModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmModal(null)} />
