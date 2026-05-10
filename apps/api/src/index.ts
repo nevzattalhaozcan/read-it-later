@@ -216,7 +216,7 @@ api.post('/translate', async (c) => {
   }
 
   const normalizedTarget = typeof target === 'string' && ['tr', 'en'].includes(target) ? target : 'tr';
-  const libreTranslateUrl = (process.env.LIBRETRANSLATE_URL || 'https://libretranslate.de/translate').replace(/\/$/, '');
+  const libreTranslateUrl = (process.env.LIBRETRANSLATE_URL || 'https://de.libretranslate.com/translate').replace(/\/$/, '');
 
   try {
     const response = await fetch(libreTranslateUrl, {
@@ -230,9 +230,16 @@ api.post('/translate', async (c) => {
       })
     });
 
-    const data = await response.json();
+    const rawBody = await response.text();
+    let data: any = null;
+    try {
+      data = rawBody ? JSON.parse(rawBody) : null;
+    } catch {
+      data = null;
+    }
+
     if (!response.ok) {
-      const message = data?.error || data?.message || 'Translation failed';
+      const message = data?.error || data?.message || `Translation failed (${response.status})`;
       return c.json({ error: message }, 502);
     }
 
