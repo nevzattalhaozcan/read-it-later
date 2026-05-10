@@ -84,6 +84,10 @@ const App: React.FC = () => {
   const [forgotOtp, setForgotOtp] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotStep, setForgotStep] = useState<'request' | 'verify' | null>(null);
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [verifyOtp, setVerifyOtp] = useState('');
+  const [verifyLoading, setVerifyLoading] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activePolicy, setActivePolicy] = useState<'terms' | 'privacy' | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, text: string, highlightId?: string | null } | null>(null);
@@ -198,6 +202,53 @@ const App: React.FC = () => {
     } catch (err: any) {
       setAuthError(err?.message || t.errorOccurred);
     } finally { setLoading(false); }
+  };
+
+  // Verification handlers (after registration)
+  const handleVerifyCode = async () => {
+    setAuthError(null);
+    if (!verifyOtp || !registerEmail) {
+      setAuthError(t.fillAllFields || 'Please fill in all fields');
+      return;
+    }
+    try {
+      setVerifyLoading(true);
+      const res = await fetch(`${AUTH_URL}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ email: registerEmail, otp: verifyOtp, purpose: 'verify' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Verification failed');
+      // refresh user
+      const me = await fetch(`${AUTH_URL}/me`, { headers: getHeaders() });
+      if (me.ok) {
+        const u = await me.json();
+        setUser(u);
+      }
+      showToast(t.verifySuccess || 'Email verified');
+      setVerifyOpen(false);
+      setVerifyOtp('');
+    } catch (err: any) {
+      setAuthError(err?.message || t.errorOccurred);
+    } finally { setVerifyLoading(false); }
+  };
+
+  const handleResendVerify = async () => {
+    if (!registerEmail) return;
+    try {
+      setVerifyLoading(true);
+      const res = await fetch(`${AUTH_URL}/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: registerEmail, purpose: 'verify' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed to resend code');
+      showToast(t.verificationCodeSent || 'Verification code sent');
+    } catch (err: any) {
+      setAuthError(err?.message || t.errorOccurred);
+    } finally { setVerifyLoading(false); }
   };
 
   const toggleLang = () => setLang(lang === 'tr' ? 'en' : 'tr');
@@ -416,9 +467,12 @@ const App: React.FC = () => {
       });
       const data = await res.json();
       if (res.ok) {
+        // Keep the user logged-in but prompt for email verification
         localStorage.setItem('token', data.token);
         setToken(data.token);
         setUser(data.user);
+        setRegisterEmail(authForm.email);
+        setVerifyOpen(true);
         showToast(t.updatedSuccessfully);
       } else {
         setAuthError(data.error || t.errorOccurred || 'Registration failed');
@@ -1843,6 +1897,20 @@ const App: React.FC = () => {
                   </button>
                 </section>
               </div>
+            </div>
+          </div>
+        )}
+        {verifyOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 border border-slate-200 dark:border-slate-800">
+              <h3 className="text-lg font-semibold mb-3">{t.verifyEmail || 'Verify your email'}</h3>
+              <p className="text-sm text-[var(--text-muted)] mb-3">{t.verificationCodeSentIntro || 'We sent a verification code to your email. Enter it below.'}</p>
+              <input value={verifyOtp} onChange={e => setVerifyOtp(e.target.value)} className="w-full px-3 py-2 rounded-md border mb-2" placeholder={t.code || 'Code'} />
+              <div className="mt-4 flex gap-2">
+                <button onClick={handleVerifyCode} disabled={verifyLoading} className="flex-1 rounded-md bg-blue-600 text-white py-2">{t.verifyCode || 'Verify'}</button>
+                <button onClick={handleResendVerify} disabled={verifyLoading} className="flex-1 rounded-md border py-2">{t.resendCode || 'Resend'}</button>
+              </div>
+              {authError && <div className="mt-3 text-sm text-red-600">{authError}</div>}
             </div>
           </div>
         )}

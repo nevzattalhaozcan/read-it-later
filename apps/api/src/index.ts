@@ -77,6 +77,18 @@ app.post('/api/v1/auth/register', async (c) => {
 
     const user = new User({ email, password, name });
     await user.save();
+    // Create and send verification OTP automatically after registration
+    try {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      const otp = new EmailOTP({ email: email.trim().toLowerCase(), code, purpose: 'verify', expiresAt });
+      await otp.save();
+      const subject = 'Your verification code';
+      const text = `Your one-time code is: ${code}. It expires in 10 minutes.`;
+      const html = renderOtpEmail(code, 'verify', process.env.APP_NAME || 'sonra-okurum');
+      // send email but don't block registration on failure
+      try { await sendEmail({ to: email, subject, text, html }); } catch (_) {}
+    } catch (_) {}
 
     const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
     const token = jwt.sign({ userId: user._id }, secret, { expiresIn: '30d' });
