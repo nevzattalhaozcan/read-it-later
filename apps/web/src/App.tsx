@@ -5,7 +5,7 @@ import {
   Inbox, Star, Search, MoreVertical,
   Archive, Check, MoreHorizontal, Edit3, Save, XCircle,
   Move, Sun, Moon, Coffee, Highlighter, MessageSquarePlus,
-  StickyNote, ChevronDown, Settings, LogOut, Copy, Link2, Languages
+  StickyNote, ChevronDown, Settings, LogOut, Copy, Languages
 } from 'lucide-react';
 import { translations, Lang } from './i18n';
 import { policies } from './policies';
@@ -752,13 +752,6 @@ const App: React.FC = () => {
     setActiveHighlightPopover(null);
   }, []);
 
-  const buildHighlightLink = (articleId: string, highlightId: string) => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('article', articleId);
-    url.searchParams.set('highlight', highlightId);
-    return url.toString();
-  };
-
   const closeContextMenu = () => setContextMenu(null);
 
   const copyTextToClipboard = async (value: string, toastMessage: string) => {
@@ -777,10 +770,6 @@ const App: React.FC = () => {
     void copyTextToClipboard(contextMenu.text, t.copied);
   };
 
-  const handleCopyHighlightLink = () => {
-    if (!selectedArticle || !contextMenu?.highlightId) return;
-    void copyTextToClipboard(buildHighlightLink(selectedArticle._id, contextMenu.highlightId), t.copiedLink);
-  };
 
   const handleSearchGoogle = () => {
     if (!contextMenu?.text) return;
@@ -1193,7 +1182,7 @@ const App: React.FC = () => {
             </button>
           </p>
 
-          <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
+          <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4" noValidate>
             {authMode === 'register' && (
               <div>
                 <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.name}</label>
@@ -1209,8 +1198,8 @@ const App: React.FC = () => {
             <div>
               <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.email}</label>
               <input 
-                type="email" 
-                required
+                type="text" 
+                
                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white"
                 value={authForm.email}
                 onChange={e => setAuthForm({...authForm, email: e.target.value})}
@@ -1410,14 +1399,7 @@ const App: React.FC = () => {
                 <Copy className="w-4 h-4 text-[var(--text-muted)]" />
                 {t.copy}
               </button>
-              <button
-                onClick={handleCopyHighlightLink}
-                disabled={!contextMenu.highlightId}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Link2 className="w-4 h-4 text-[var(--text-muted)]" />
-                {t.copyLinkToHighlight}
-              </button>
+              {/* copy link to highlight removed per UX request */}
               <button
                 onClick={handleSearchGoogle}
                 className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
@@ -1807,7 +1789,7 @@ const App: React.FC = () => {
                     <div>
                       <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.email}</label>
                       <input
-                        type="email"
+                        type="text"
                         value={settingsForm.email}
                         onChange={(e) => setSettingsForm(prev => ({ ...prev, email: e.target.value }))}
                         className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
