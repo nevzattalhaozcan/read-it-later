@@ -1757,7 +1757,7 @@ const App: React.FC = () => {
         {/* Main Content */}
         <main className="flex-1 flex flex-col min-w-0 bg-[var(--bg-main)] safe-pb relative" onClick={() => setActiveMenuId(null)}>
           {/* Header */}
-          <header className="sticky top-0 z-40 bg-[var(--bg-main)]/80 backdrop-blur-md lg:bg-transparent lg:backdrop-blur-none border-b lg:border-none border-[var(--border-color)] px-4 sm:px-8 py-3 flex items-center justify-between gap-4 transition-colors" onClick={e => e.stopPropagation()}>
+          <header className="sticky top-0 z-[200] bg-[var(--bg-main)]/80 backdrop-blur-md lg:bg-transparent lg:backdrop-blur-none border-b lg:border-none border-[var(--border-color)] px-4 sm:px-8 py-3 flex items-center justify-between gap-4 transition-colors" onClick={e => e.stopPropagation()}>
             {!isSearchActive && !isAddUrlActive && (
               <div className="flex items-center gap-3 lg:hidden">
                 <img src={`${import.meta.env.BASE_URL}logo.png`} alt="logo" className="h-8 w-auto" />
@@ -2167,8 +2167,8 @@ const App: React.FC = () => {
         )}
 
         {isLibraryOpen && (
-          <div className="fixed inset-0 z-[190] bg-[var(--bg-main)] text-[var(--text-main)] animate-in slide-in-from-right duration-300">
-            <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-4 py-6">
+          <div className="fixed top-[57px] bottom-[calc(60px+var(--safe-area-bottom))] inset-x-0 z-[190] bg-[var(--bg-main)] text-[var(--text-main)] animate-in slide-in-from-right duration-300 overflow-y-auto">
+            <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-4 py-6">
               <div className="mb-8 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[var(--text-muted)]">{t.library}</p>
