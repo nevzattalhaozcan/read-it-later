@@ -13,7 +13,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { EmailOTP } from './models/EmailOTP.js';
-import { sendEmail } from './utils/mailer.js';
+import { sendEmail, getTransporter } from './utils/mailer.js';
 import { renderOtpEmail } from './utils/emailTemplates.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -133,7 +133,8 @@ app.post('/api/v1/auth/register', async (c) => {
         const subject = 'Your verification code';
         const text = `Your one-time code is: ${code}. It expires in 10 minutes.`;
         const html = renderOtpEmail(code, 'verify', process.env.APP_NAME || 'sonra-okurum');
-        try { await sendEmail({ to: normalizedEmail, subject, text, html }); } catch (_) {}
+        // Background the email sending
+        sendEmail({ to: normalizedEmail, subject, text, html }).catch(err => console.error('Background email failed:', err));
       } catch (_) {}
 
       const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
@@ -159,7 +160,8 @@ app.post('/api/v1/auth/register', async (c) => {
       const text = `Your one-time code is: ${code}. It expires in 10 minutes.`;
       const html = renderOtpEmail(code, 'verify', process.env.APP_NAME || 'sonra-okurum');
       // send email but don't block registration on failure
-      try { await sendEmail({ to: normalizedEmail, subject, text, html }); } catch (_) {}
+      // Background the email sending
+      sendEmail({ to: normalizedEmail, subject, text, html }).catch(err => console.error('Background email failed:', err));
     } catch (_) {}
 
     const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
@@ -520,6 +522,10 @@ const server = serve({
   fetch: app.fetch,
   port
 });
+
+// Pre-initialize DB and Mailer at startup
+connectDB().catch(err => console.error('Startup DB connection failed:', err));
+getTransporter().catch(err => console.error('Startup Mailer initialization failed:', err));
 
 // Create WebSocket server with a specific path
 wss = new WebSocketServer({ noServer: true });

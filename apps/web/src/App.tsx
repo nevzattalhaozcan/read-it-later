@@ -79,6 +79,7 @@ const App: React.FC = () => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
   const [authError, setAuthError] = useState<string | null>(null);
+  const [forgotError, setForgotError] = useState<string | null>(null);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotOtp, setForgotOtp] = useState('');
@@ -159,9 +160,9 @@ const App: React.FC = () => {
 
   // Forgot password flow: request OTP -> verify & reset
   const handleRequestReset = async () => {
-    setAuthError(null);
+    setForgotError(null);
     if (!emailRegex.test(forgotEmail)) {
-      setAuthError(t.invalidEmail || 'Invalid email');
+      setForgotError(t.invalidEmail || 'Invalid email');
       return;
     }
     try {
@@ -176,14 +177,14 @@ const App: React.FC = () => {
       setForgotStep('verify');
       showToast(t.resetDataDone || 'Code sent — check your email');
     } catch (err: any) {
-      setAuthError(err?.message || t.errorOccurred);
+      setForgotError(err?.message || t.errorOccurred);
     } finally { setLoading(false); }
   };
 
   const handleVerifyAndReset = async () => {
-    setAuthError(null);
+    setForgotError(null);
     if (!forgotOtp || !forgotNewPassword) {
-      setAuthError(t.fillAllFields || 'Please fill in all fields');
+      setForgotError(t.fillAllFields || 'Please fill in all fields');
       return;
     }
     try {
@@ -199,8 +200,9 @@ const App: React.FC = () => {
       setForgotOpen(false);
       setForgotStep(null);
       setForgotEmail(''); setForgotOtp(''); setForgotNewPassword('');
+      setForgotError(null);
     } catch (err: any) {
-      setAuthError(err?.message || t.errorOccurred);
+      setForgotError(err?.message || t.errorOccurred);
     } finally { setLoading(false); }
   };
 
@@ -1175,7 +1177,10 @@ const App: React.FC = () => {
           <p className="text-center text-slate-500 dark:text-slate-400 mb-8 text-sm">
             {authMode === 'login' ? t.dontHaveAccount : t.alreadyHaveAccount}{' '}
             <button 
-              onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+              onClick={() => {
+                setAuthMode(authMode === 'login' ? 'register' : 'login');
+                setAuthError(null);
+              }}
               className="text-blue-600 font-semibold hover:underline"
             >
               {authMode === 'login' ? t.register : t.login}
@@ -1226,7 +1231,7 @@ const App: React.FC = () => {
             )}
             {authMode === 'login' && (
               <div className="mt-2 text-right">
-                <button type="button" onClick={() => { setForgotOpen(true); setForgotStep('request'); }} className="text-sm text-blue-600 hover:underline">{t.forgotPassword || 'Forgot password?'}</button>
+                <button type="button" onClick={() => { setForgotOpen(true); setForgotStep('request'); setForgotError(null); }} className="text-sm text-blue-600 hover:underline">{t.forgotPassword || 'Forgot password?'}</button>
               </div>
             )}
             <div className="mt-6 text-center text-[10px] text-slate-500 leading-relaxed px-4">
@@ -1248,7 +1253,7 @@ const App: React.FC = () => {
                     <input value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} className="w-full px-3 py-2 rounded-md border" placeholder={t.email} />
                     <div className="mt-4 flex gap-2">
                       <button onClick={handleRequestReset} className="flex-1 rounded-md bg-blue-600 text-white py-2">{t.sendCode || 'Send code'}</button>
-                      <button onClick={() => setForgotOpen(false)} className="flex-1 rounded-md border py-2">{t.cancel || 'Cancel'}</button>
+                      <button onClick={() => { setForgotOpen(false); setForgotError(null); }} className="flex-1 rounded-md border py-2">{t.cancel || 'Cancel'}</button>
                     </div>
                   </>
                 )}
@@ -1259,11 +1264,11 @@ const App: React.FC = () => {
                     <input value={forgotNewPassword} onChange={e => setForgotNewPassword(e.target.value)} className="w-full px-3 py-2 rounded-md border mb-2" placeholder={t.newPassword || 'New password'} type="password" />
                     <div className="mt-4 flex gap-2">
                       <button onClick={handleVerifyAndReset} className="flex-1 rounded-md bg-blue-600 text-white py-2">{t.resetPassword || 'Reset'}</button>
-                      <button onClick={() => { setForgotOpen(false); setForgotStep(null); }} className="flex-1 rounded-md border py-2">{t.cancel || 'Cancel'}</button>
+                      <button onClick={() => { setForgotOpen(false); setForgotStep(null); setForgotError(null); }} className="flex-1 rounded-md border py-2">{t.cancel || 'Cancel'}</button>
                     </div>
                   </>
                 )}
-                {authError && <div className="mt-3 text-sm text-red-600">{authError}</div>}
+                {forgotError && <div className="mt-3 text-sm text-red-600">{forgotError}</div>}
               </div>
             </div>
           )}
