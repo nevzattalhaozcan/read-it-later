@@ -75,7 +75,9 @@ const App: React.FC = () => {
 
   // Auth State
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [user, setUser] = useState<{ id: string, email: string, name?: string } | null>(null);
+  const [user, setUser] = useState<{ id: string, email: string, name?: string, emailVerified?: boolean } | null>(null);
+  // Holds a token that has been issued but NOT yet committed — user must verify email first
+  const [pendingVerificationToken, setPendingVerificationToken] = useState<string | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
   const [authError, setAuthError] = useState<string | null>(null);
@@ -85,7 +87,6 @@ const App: React.FC = () => {
   const [forgotOtp, setForgotOtp] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotStep, setForgotStep] = useState<'request' | 'verify' | null>(null);
-  const [verifyOpen, setVerifyOpen] = useState(false);
   const [registerEmail, setRegisterEmail] = useState('');
   const [verifyOtp, setVerifyOtp] = useState('');
   const [verifyLoading, setVerifyLoading] = useState(false);
@@ -217,19 +218,25 @@ const App: React.FC = () => {
       setVerifyLoading(true);
       const res = await fetch(`${AUTH_URL}/verify-otp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: registerEmail, otp: verifyOtp, purpose: 'verify' })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Verification failed');
-      // refresh user
-      const me = await fetch(`${AUTH_URL}/me`, { headers: getHeaders() });
+      // Commit the pending token — user is now fully authenticated
+      const verifiedToken = pendingVerificationToken;
+      if (verifiedToken) {
+        localStorage.setItem('token', verifiedToken);
+        setToken(verifiedToken);
+        setPendingVerificationToken(null);
+      }
+      // Fetch user data with the newly committed token
+      const me = await fetch(`${AUTH_URL}/me`, { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${verifiedToken}` } });
       if (me.ok) {
         const u = await me.json();
         setUser(u);
       }
       showToast(t.verifySuccess || 'Email verified');
-      setVerifyOpen(false);
       setVerifyOtp('');
     } catch (err: any) {
       setAuthError(err?.message || t.errorOccurred);
@@ -433,10 +440,17 @@ const App: React.FC = () => {
       });
       const data = await res.json();
       if (res.ok) {
-        localStorage.setItem('token', data.token);
-        setToken(data.token);
-        setUser(data.user);
-        showToast(t.welcomeBack);
+        if (data.requiresVerification) {
+          // Don't grant access — hold token until email is verified
+          setPendingVerificationToken(data.token);
+          setRegisterEmail(data?.user?.email || authForm.email);
+          showToast(t.verificationCodeSent || 'Check your email for a verification code');
+        } else {
+          localStorage.setItem('token', data.token);
+          setToken(data.token);
+          setUser(data.user);
+          showToast(t.welcomeBack);
+        }
       } else {
         setAuthError(data.error || t.invalidCredentials || 'Invalid credentials');
       }
@@ -469,13 +483,10 @@ const App: React.FC = () => {
       });
       const data = await res.json();
       if (res.ok) {
-        // Keep the user logged-in but prompt for email verification
-        localStorage.setItem('token', data.token);
-        setToken(data.token);
-        setUser(data.user);
+        // Do NOT set token or localStorage — hold pending until email is verified
+        setPendingVerificationToken(data.token);
         setRegisterEmail(data?.user?.email || authForm.email);
-        setVerifyOpen(true);
-        showToast(data?.message || t.updatedSuccessfully);
+        showToast(data?.message || t.verificationCodeSent || 'Check your email for a verification code');
       } else {
         setAuthError(data.error || t.errorOccurred || 'Registration failed');
       }
@@ -1164,6 +1175,61 @@ const App: React.FC = () => {
   );
 
   if (!token) {
+    // --- Verification wall: show OTP screen, never the main app ---
+    if (pendingVerificationToken) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-500">
+            <div className="flex justify-center mb-8">
+              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-20 w-auto" />
+            </div>
+            <h2 className="text-2xl font-bold text-center text-slate-800 dark:text-slate-100 mb-2">{t.verifyEmail}</h2>
+            <p className="text-center text-slate-500 dark:text-slate-400 mb-8 text-sm">{t.verificationCodeSentIntro}</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.code}</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white tracking-widest text-center text-xl font-bold"
+                  value={verifyOtp}
+                  onChange={e => setVerifyOtp(e.target.value)}
+                  placeholder="000000"
+                  maxLength={6}
+                />
+              </div>
+              <button
+                onClick={handleVerifyCode}
+                disabled={verifyLoading || verifyOtp.length < 6}
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98]"
+              >
+                {verifyLoading ? <Loader2 className="w-5 h-5 animate-spin inline" /> : t.verifyCode}
+              </button>
+              {authError && <div className="text-center text-sm text-red-600">{authError}</div>}
+              <div className="text-center">
+                <button
+                  onClick={handleResendVerify}
+                  disabled={verifyLoading}
+                  className="text-sm text-blue-600 hover:underline disabled:opacity-50"
+                >
+                  {t.resendCode}
+                </button>
+              </div>
+              <div className="text-center">
+                <button
+                  onClick={() => { setPendingVerificationToken(null); setVerifyOtp(''); setAuthError(null); setRegisterEmail(''); }}
+                  className="text-xs text-slate-400 hover:text-slate-600 hover:underline"
+                >
+                  {t.cancel}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
         <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-500">
@@ -1887,20 +1953,7 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-        {verifyOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 border border-slate-200 dark:border-slate-800">
-              <h3 className="text-lg font-semibold mb-3">{t.verifyEmail || 'Verify your email'}</h3>
-              <p className="text-sm text-[var(--text-muted)] mb-3">{t.verificationCodeSentIntro || 'We sent a verification code to your email. Enter it below.'}</p>
-              <input value={verifyOtp} onChange={e => setVerifyOtp(e.target.value)} className="w-full px-3 py-2 rounded-md border mb-2" placeholder={t.code || 'Code'} />
-              <div className="mt-4 flex gap-2">
-                <button onClick={handleVerifyCode} disabled={verifyLoading} className="flex-1 rounded-md bg-blue-600 text-white py-2">{t.verifyCode || 'Verify'}</button>
-                <button onClick={handleResendVerify} disabled={verifyLoading} className="flex-1 rounded-md border py-2">{t.resendCode || 'Resend'}</button>
-              </div>
-              {authError && <div className="mt-3 text-sm text-red-600">{authError}</div>}
-            </div>
-          </div>
-        )}
+
 
         {/* Modals with themes support */}
         {editArticle && (

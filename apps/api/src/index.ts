@@ -167,7 +167,7 @@ app.post('/api/v1/auth/register', async (c) => {
     const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
     const token = jwt.sign({ userId: user._id }, secret, { expiresIn: '30d' });
 
-    return c.json({ token, user: { id: user._id, email: user.email, name: user.name } }, 201);
+    return c.json({ token, user: { id: user._id, email: user.email, name: user.name, emailVerified: false }, requiresVerification: true }, 201);
   } catch (error) {
     return c.json({ error: 'Registration failed' }, 500);
   }
@@ -189,7 +189,16 @@ app.post('/api/v1/auth/login', async (c) => {
     const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
     const token = jwt.sign({ userId: user._id }, secret, { expiresIn: '30d' });
 
-    return c.json({ token, user: { id: user._id, email, name: user.name } });
+    if (!user.emailVerified) {
+      return c.json({
+        token,
+        user: { id: user._id, email: user.email, name: user.name, emailVerified: false },
+        requiresVerification: true,
+        message: 'Email not verified. Please verify your email to continue.'
+      });
+    }
+
+    return c.json({ token, user: { id: user._id, email, name: user.name, emailVerified: true } });
   } catch (error) {
     return c.json({ error: 'Login failed' }, 500);
   }

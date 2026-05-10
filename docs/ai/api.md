@@ -41,8 +41,8 @@ https://api.sonra-okurum.com  (prod — check vercel.json for actual domain)
 | Method | Path | Body | Response | Notes |
 |---|---|---|---|---|
 | `GET` | `/` | — | `text` | Health check |
-| `POST` | `/api/v1/auth/register` | `{ email, password, name }` | `{ token, user }` or `{ token, user, requiresVerification }` | Sends OTP email in background |
-| `POST` | `/api/v1/auth/login` | `{ email, password }` | `{ token, user }` | |
+| `POST` | `/api/v1/auth/register` | `{ email, password, name }` | `{ token, user, requiresVerification }` | Sends OTP email in background. `user` includes `emailVerified: false`. |
+| `POST` | `/api/v1/auth/login` | `{ email, password }` | `{ token, user, requiresVerification?, message? }` | `requiresVerification: true` if user email not verified. |
 | `POST` | `/api/v1/auth/send-otp` | `{ email, purpose: 'verify'\|'reset' }` | `{ success, preview? }` | Rate limited |
 | `POST` | `/api/v1/auth/verify-otp` | `{ email, otp, purpose }` | `{ success }` | Marks user as verified if purpose='verify' |
 | `POST` | `/api/v1/auth/reset-password` | `{ email, otp, newPassword }` | `{ success }` | |

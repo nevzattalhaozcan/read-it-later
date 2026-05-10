@@ -14,13 +14,16 @@
 
 ```
 if (!token)
-  → <AuthView>          (login / register / forgot password / OTP verify)
+  if (pendingVerificationToken)
+    → <VerificationWall> (OTP verify screen, blocks app access)
+  else
+    → <AuthView>         (login / register / forgot password)
 else if (isSettingsOpen)
   → <SettingsView>
 else if (selectedArticle)
   → <ArticleReaderView>
 else
-  → <ArticleListView>   (sidebar + article grid)
+  → <ArticleListView>    (sidebar + article grid)
 ```
 
 > **Critical:** Any confirm modal, toast, or overlay that must be visible regardless of view must be rendered in **both** the list view and reader view branches.
@@ -47,15 +50,15 @@ All state lives in the `App` component. Key state variables:
 | State | Type | Purpose |
 |---|---|---|
 | `token` | `string \| null` | JWT token (persisted in localStorage) |
-| `user` | `{ id, email, name? } \| null` | Logged-in user |
+| `user` | `{ id, email, name?, emailVerified? } \| null` | Logged-in user |
+| `pendingVerificationToken` | `string \| null` | Token held while waiting for OTP (blocks app access) |
 | `authMode` | `'login' \| 'register'` | Auth form mode toggle |
 | `authForm` | `{ email, password, name }` | Auth form controlled inputs |
 | `authError` | `string \| null` | Auth form error message |
 | `forgotError` | `string \| null` | Forgot password error (separate from authError!) |
 | `forgotOpen` | `boolean` | Forgot password panel visibility |
 | `forgotStep` | `'request' \| 'verify' \| null` | Multi-step forgot password flow |
-| `verifyOpen` | `boolean` | Post-register OTP verification modal |
-| `registerEmail` | `string` | Email captured at register, passed to verify modal |
+| `registerEmail` | `string` | Email captured at register/login, used for verify screen |
 
 ### Articles & Navigation
 | State | Type | Purpose |
@@ -111,10 +114,10 @@ Plain fetch calls. Called on token mount and triggered by WebSocket messages.
 Clears localStorage token, resets all auth/article state.
 
 ### Auth Handlers
-- `handleLogin(e)` — validates form, calls `/auth/login`, sets token + user
-- `handleRegister(e)` — validates form, calls `/auth/register`, opens verify modal
-- `handleVerifyCode()` — submits OTP, marks user verified
-- `handleResendVerify()` — resends OTP to `registerEmail`
+- `handleLogin(e)` — validates form, calls `/auth/login`. If unverified, sets `pendingVerificationToken`.
+- `handleRegister(e)` — validates form, calls `/auth/register`. Sets `pendingVerificationToken` (no auto-login).
+- `handleVerifyCode()` — submits OTP. On success, commits `pendingVerificationToken` to `token` and `localStorage`.
+- `handleResendVerify()` — resends OTP to `registerEmail`.
 
 ---
 
