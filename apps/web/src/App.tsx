@@ -1113,13 +1113,13 @@ const App: React.FC = () => {
   };
 
   const highlightsContent = articlesWithHighlights.length === 0 ? (
-    <div className="flex flex-col items-center justify-center py-32 gap-5">
-      <div className="w-16 h-16 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
-        <Highlighter className="w-7 h-7 text-yellow-500/60" />
+    <div className="bg-[var(--bg-card)] rounded-[2.5rem] border border-[var(--border-color)] shadow-sm p-12 sm:p-20 flex flex-col items-center justify-center gap-6 theme-transition">
+      <div className="w-20 h-20 rounded-3xl bg-yellow-500/10 flex items-center justify-center animate-in zoom-in-95 duration-500">
+        <Highlighter className="w-9 h-9 text-yellow-500/60" />
       </div>
-      <div className="text-center">
-        <p className="font-semibold text-[var(--text-main)] mb-1">{t.noHighlightsYet}</p>
-        <p className="text-sm text-[var(--text-muted)]">Makalelerdeki metinleri seçerek işaretlemeye başlayın.</p>
+      <div className="text-center max-w-sm">
+        <h3 className="text-lg font-bold text-[var(--text-main)] mb-2">{t.noHighlightsYet}</h3>
+        <p className="text-sm text-[var(--text-muted)] leading-relaxed">{t.noHighlightsDesc}</p>
       </div>
     </div>
   ) : (
@@ -1913,6 +1913,26 @@ const App: React.FC = () => {
                   <div className="flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="w-8 h-8 text-blue-600 animate-spin" /><p className="text-[var(--text-muted)] font-medium">{t.loading}</p></div>
                 ) : activeFilter.type === 'highlights' ? (
                   <div className="">{highlightsContent}</div>
+                ) : filteredArticles.length === 0 ? (
+                  <div className="bg-[var(--bg-card)] rounded-[2.5rem] border border-[var(--border-color)] shadow-sm p-12 sm:p-20 flex flex-col items-center justify-center gap-6 theme-transition">
+                    <div className="w-20 h-20 rounded-3xl bg-blue-600/5 flex items-center justify-center animate-in zoom-in-95 duration-500">
+                      {activeFilter.type === 'favorite' ? <Star className="w-9 h-9 text-amber-500/60" /> : 
+                       activeFilter.type === 'archive' ? <Archive className="w-9 h-9 text-slate-500/60" /> : 
+                       <Inbox className="w-9 h-9 text-blue-600/60" />}
+                    </div>
+                    <div className="text-center max-w-sm">
+                      <h3 className="text-lg font-bold text-[var(--text-main)] mb-2">
+                        {activeFilter.type === 'favorite' ? t.noFavoritesYet : 
+                         activeFilter.type === 'archive' ? t.noArchiveYet : 
+                         t.noArticlesYet}
+                      </h3>
+                      <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+                        {activeFilter.type === 'favorite' ? t.noFavoritesDesc : 
+                         activeFilter.type === 'archive' ? t.noArchiveDesc : 
+                         t.noArticlesDesc}
+                      </p>
+                    </div>
+                  </div>
                 ) : (
                   filteredArticles.map((article) => (
                     <div key={article._id} onClick={() => setSelectedArticle(article)} className="group bg-[var(--bg-card)] p-5 sm:p-7 rounded-[2rem] shadow-sm border border-[var(--border-color)] hover:border-blue-600/30 hover:shadow-xl transition-all cursor-pointer relative theme-transition flex flex-col sm:flex-row gap-6 overflow-visible w-full">
