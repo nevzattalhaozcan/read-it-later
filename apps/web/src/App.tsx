@@ -134,6 +134,7 @@ const App: React.FC = () => {
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isAddUrlActive, setIsAddUrlActive] = useState(false);
   const [targetHighlightId, setTargetHighlightId] = useState<string | null>(null);
+  const [shouldShowHighlightPopup, setShouldShowHighlightPopup] = useState(true);
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [isArticleMenuOpen, setIsArticleMenuOpen] = useState(false);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
@@ -870,6 +871,7 @@ const App: React.FC = () => {
       window.getSelection()?.removeAllRanges();
       if (withNote) {
         setNoteText(absorbedNote); // Pre-populate note editor with the absorbed note
+        setShouldShowHighlightPopup(true);
         setTargetHighlightId(newHighlight.id);
         setIsInlineEditing(true);
       } else {
@@ -979,8 +981,12 @@ const App: React.FC = () => {
             const y = rect.top + window.scrollY;
             const x = containerRect ? containerRect.right + 20 : rect.right + 20;
             
-            setActiveHighlightPopover({ ...hl, x, y });
-            setIsInlineEditing(true);
+            
+            if (shouldShowHighlightPopup) {
+              setActiveHighlightPopover({ ...hl, x, y });
+              setIsInlineEditing(true);
+            }
+            
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
             (el as HTMLElement).style.boxShadow = '0 0 20px 10px rgba(234, 179, 8, 0.4)';
@@ -1123,6 +1129,7 @@ const App: React.FC = () => {
                     className="group py-6 first:pt-4 last:pb-2 cursor-pointer hover:bg-blue-600/5 transition-colors -mx-5 px-5"
                     onClick={() => { 
                       if (window.getSelection()?.toString()) return;
+                      setShouldShowHighlightPopup(false);
                       setTargetHighlightId(hl.id); 
                       setSelectedArticle(article); 
                     }}
