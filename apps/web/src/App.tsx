@@ -2174,9 +2174,6 @@ const App: React.FC = () => {
                   <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[var(--text-muted)]">{t.library}</p>
                   <h2 className="mt-2 text-2xl font-bold tracking-tight">{t.library}</h2>
                 </div>
-                <button onClick={() => setIsLibraryOpen(false)} className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-2.5 text-[var(--text-muted)]">
-                  <X className="w-5 h-5" />
-                </button>
               </div>
 
               <div className="space-y-8 pb-32 overflow-y-auto">
