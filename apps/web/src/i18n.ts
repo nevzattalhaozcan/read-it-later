@@ -139,6 +139,10 @@ export const translations = {
     matchContent: 'içerik',
     matchNote: 'not',
     matchTag: 'etiket',
+    emailNotVerified: 'E-posta henüz doğrulanmamış. Lütfen gelen kutunuzu kontrol edin ve linke tıklayın.',
+    emailAlreadyInUse: 'Bu e-posta adresi zaten kullanımda.',
+    checkEmailInstructions: 'E-postanıza bir doğrulama linki gönderdik. Lütfen linke tıkladıktan sonra devam etmek için aşağıdaki butona basın.',
+    checkVerificationStatus: 'E-postamı doğruladım',
   },
   en: {
     appName: 'sonra-okurum',
@@ -278,5 +282,9 @@ export const translations = {
     matchContent: 'content',
     matchNote: 'note',
     matchTag: 'tag',
+    emailNotVerified: 'Email not verified yet. Please check your inbox and click the link.',
+    emailAlreadyInUse: 'This email address is already in use.',
+    checkEmailInstructions: 'We sent a verification link to your email. Please click the link in your email and then click the button below to continue.',
+    checkVerificationStatus: 'I have verified my email',
   }
 };

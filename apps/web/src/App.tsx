@@ -10,6 +10,15 @@ import {
 import { translations, Lang } from './i18n';
 import { policies } from './policies';
 import { Highlight, generateId, captureSelectionContext, applyHighlightsToDOM, isAlreadyHighlighted, mergeOverlappingHighlights, CONTEXT_LENGTH } from './highlights';
+import { auth } from './lib/firebase';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  sendEmailVerification, 
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  signOut
+} from 'firebase/auth';
 
 // --- Types ---
 interface Article {
@@ -84,9 +93,6 @@ const App: React.FC = () => {
   const [forgotError, setForgotError] = useState<string | null>(null);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotOtp, setForgotOtp] = useState('');
-  const [forgotNewPassword, setForgotNewPassword] = useState('');
-  const [forgotStep, setForgotStep] = useState<'request' | 'verify' | null>(null);
   const [registerEmail, setRegisterEmail] = useState('');
   const [verifyOtp, setVerifyOtp] = useState('');
   const [verifyLoading, setVerifyLoading] = useState(false);
@@ -150,6 +156,44 @@ const App: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // --- Auth Effects ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        const token = await fbUser.getIdToken();
+        if (fbUser.emailVerified) {
+          localStorage.setItem('token', token);
+          setToken(token);
+          setPendingVerificationToken(null);
+          // Initial user fetch
+          fetchUser(token);
+        } else {
+          setPendingVerificationToken(token);
+          setRegisterEmail(fbUser.email || '');
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const fetchUser = async (authToken?: string) => {
+    const activeToken = authToken || token;
+    if (!activeToken) return;
+    try {
+      const res = await fetch(`${AUTH_URL}/me`, {
+        headers: { 'Authorization': `Bearer ${activeToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data);
+      } else if (res.status === 401) {
+        handleLogout();
+      }
+    } catch (err) {
+      console.error('Fetch user error:', err);
+    }
+  };
   const prefsLoaded = useRef(false);
   const lastSyncedPrefs = useRef<{ lang: Lang; theme: Theme; fontSizeIdx: number; widthIdx: number }>({ lang: 'tr', theme: 'light', fontSizeIdx: 2, widthIdx: 1 });
 
@@ -159,7 +203,7 @@ const App: React.FC = () => {
     setTheme(next);
   };
 
-  // Forgot password flow: request OTP -> verify & reset
+  // Forgot password flow: Firebase link-based reset
   const handleRequestReset = async () => {
     setForgotError(null);
     if (!emailRegex.test(forgotEmail)) {
@@ -168,40 +212,10 @@ const App: React.FC = () => {
     }
     try {
       setLoading(true);
-      const res = await fetch(`${AUTH_URL}/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: forgotEmail, purpose: 'reset' })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Failed to send code');
-      setForgotStep('verify');
-      showToast(t.resetDataDone || 'Code sent — check your email');
-    } catch (err: any) {
-      setForgotError(err?.message || t.errorOccurred);
-    } finally { setLoading(false); }
-  };
-
-  const handleVerifyAndReset = async () => {
-    setForgotError(null);
-    if (!forgotOtp || !forgotNewPassword) {
-      setForgotError(t.fillAllFields || 'Please fill in all fields');
-      return;
-    }
-    try {
-      setLoading(true);
-      const res = await fetch(`${AUTH_URL}/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: forgotEmail, otp: forgotOtp, newPassword: forgotNewPassword })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Reset failed');
-      showToast(t.passwordUpdated || 'Password updated');
+      await sendPasswordResetEmail(auth, forgotEmail);
+      showToast(t.resetDataDone || 'Reset link sent — check your email');
       setForgotOpen(false);
-      setForgotStep(null);
-      setForgotEmail(''); setForgotOtp(''); setForgotNewPassword('');
-      setForgotError(null);
+      setForgotEmail('');
     } catch (err: any) {
       setForgotError(err?.message || t.errorOccurred);
     } finally { setLoading(false); }
@@ -216,26 +230,22 @@ const App: React.FC = () => {
     }
     try {
       setVerifyLoading(true);
-      const res = await fetch(`${AUTH_URL}/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: registerEmail, otp: verifyOtp, purpose: 'verify' })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Verification failed');
-      // Commit the pending token — user is now fully authenticated
-      const verifiedToken = pendingVerificationToken;
-      if (verifiedToken) {
-        localStorage.setItem('token', verifiedToken);
-        setToken(verifiedToken);
-        setPendingVerificationToken(null);
+      const fbUser = auth.currentUser;
+      if (!fbUser) throw new Error('No user found');
+      
+      await fbUser.reload();
+      if (!fbUser.emailVerified) {
+        throw new Error(t.emailNotVerified || 'Email not verified yet. Please check your inbox and click the link.');
       }
-      // Fetch user data with the newly committed token
-      const me = await fetch(`${AUTH_URL}/me`, { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${verifiedToken}` } });
-      if (me.ok) {
-        const u = await me.json();
-        setUser(u);
-      }
+
+      const verifiedToken = await fbUser.getIdToken(true);
+      localStorage.setItem('token', verifiedToken);
+      setToken(verifiedToken);
+      setPendingVerificationToken(null);
+
+      // Fetch user data from our API
+      await fetchUser(verifiedToken);
+      
       showToast(t.verifySuccess || 'Email verified');
       setVerifyOtp('');
     } catch (err: any) {
@@ -244,17 +254,11 @@ const App: React.FC = () => {
   };
 
   const handleResendVerify = async () => {
-    if (!registerEmail) return;
+    if (!auth.currentUser) return;
     try {
       setVerifyLoading(true);
-      const res = await fetch(`${AUTH_URL}/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: registerEmail, purpose: 'verify' })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Failed to resend code');
-      showToast(t.verificationCodeSent || 'Verification code sent');
+      await sendEmailVerification(auth.currentUser);
+      showToast(t.verificationCodeSent || 'Verification link sent');
     } catch (err: any) {
       setAuthError(err?.message || t.errorOccurred);
     } finally { setVerifyLoading(false); }
@@ -382,18 +386,6 @@ const App: React.FC = () => {
     };
   }, [token]);
 
-  const fetchUser = async () => {
-    try {
-      const res = await fetch(`${AUTH_URL}/me`, { headers: getHeaders() });
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data);
-      } else if (res.status === 401) {
-        handleLogout();
-      }
-    } catch (err) {}
-  };
-
   const fetchArticles = async () => {
     try {
       const res = await fetch(API_URL, { headers: getHeaders() });
@@ -433,29 +425,26 @@ const App: React.FC = () => {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${AUTH_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: authForm.email, password: authForm.password })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        if (data.requiresVerification) {
-          // Don't grant access — hold token until email is verified
-          setPendingVerificationToken(data.token);
-          setRegisterEmail(data?.user?.email || authForm.email);
-          showToast(t.verificationCodeSent || 'Check your email for a verification code');
-        } else {
-          localStorage.setItem('token', data.token);
-          setToken(data.token);
-          setUser(data.user);
-          showToast(t.welcomeBack);
-        }
+      const userCredential = await signInWithEmailAndPassword(auth, authForm.email, authForm.password);
+      const fbUser = userCredential.user;
+      const idToken = await fbUser.getIdToken();
+
+      if (!fbUser.emailVerified) {
+        setPendingVerificationToken(idToken);
+        setRegisterEmail(fbUser.email || authForm.email);
+        showToast(t.verificationCodeSent || 'Please verify your email');
       } else {
-        setAuthError(data.error || t.invalidCredentials || 'Invalid credentials');
+        localStorage.setItem('token', idToken);
+        setToken(idToken);
+        await fetchUser(idToken);
+        showToast(t.welcomeBack);
       }
-    } catch (err) {
-      setAuthError(t.connectionError);
+    } catch (err: any) {
+      let msg = err?.message;
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        msg = t.invalidCredentials || 'Invalid credentials';
+      }
+      setAuthError(msg);
     } finally { setLoading(false); }
   };
 
@@ -476,29 +465,31 @@ const App: React.FC = () => {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${AUTH_URL}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(authForm)
-      });
-      const data = await res.json();
-      if (res.ok) {
-        // Do NOT set token or localStorage — hold pending until email is verified
-        setPendingVerificationToken(data.token);
-        setRegisterEmail(data?.user?.email || authForm.email);
-        showToast(data?.message || t.verificationCodeSent || 'Check your email for a verification code');
-      } else {
-        setAuthError(data.error || t.errorOccurred || 'Registration failed');
-      }
-    } catch (err) { setAuthError(t.connectionError); } finally { setLoading(false); }
+      const userCredential = await createUserWithEmailAndPassword(auth, authForm.email, authForm.password);
+      const fbUser = userCredential.user;
+      
+      // Send verification link
+      await sendEmailVerification(fbUser);
+      
+      const idToken = await fbUser.getIdToken();
+      setPendingVerificationToken(idToken);
+      setRegisterEmail(fbUser.email || authForm.email);
+      showToast(t.verificationCodeSent || 'Verification link sent to your email');
+    } catch (err: any) { 
+      let msg = err?.message;
+      if (err.code === 'auth/email-already-in-use') msg = t.emailAlreadyInUse || 'Email already in use';
+      setAuthError(msg); 
+    } finally { setLoading(false); }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut(auth);
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
     setArticles([]);
     setSelectedArticle(null);
+    setPendingVerificationToken(null);
   };
 
   const openSettingsPage = () => {
@@ -1186,25 +1177,17 @@ const App: React.FC = () => {
             <h2 className="text-2xl font-bold text-center text-slate-800 dark:text-slate-100 mb-2">{t.verifyEmail}</h2>
             <p className="text-center text-slate-500 dark:text-slate-400 mb-8 text-sm">{t.verificationCodeSentIntro}</p>
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1.5 ml-1">{t.code}</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white tracking-widest text-center text-xl font-bold"
-                  value={verifyOtp}
-                  onChange={e => setVerifyOtp(e.target.value)}
-                  placeholder="000000"
-                  maxLength={6}
-                />
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/30">
+                <p className="text-sm text-blue-700 dark:text-blue-300 text-center leading-relaxed">
+                  {t.checkEmailInstructions || 'We sent a verification link to your email. Please click the link in your email and then click the button below to continue.'}
+                </p>
               </div>
               <button
                 onClick={handleVerifyCode}
-                disabled={verifyLoading || verifyOtp.length < 6}
+                disabled={verifyLoading}
                 className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98]"
               >
-                {verifyLoading ? <Loader2 className="w-5 h-5 animate-spin inline" /> : t.verifyCode}
+                {verifyLoading ? <Loader2 className="w-5 h-5 animate-spin inline" /> : (t.checkVerificationStatus || 'I have verified my email')}
               </button>
               {authError && <div className="text-center text-sm text-red-600">{authError}</div>}
               <div className="text-center">
@@ -1213,15 +1196,15 @@ const App: React.FC = () => {
                   disabled={verifyLoading}
                   className="text-sm text-blue-600 hover:underline disabled:opacity-50"
                 >
-                  {t.resendCode}
+                  {t.resendCode || 'Resend link'}
                 </button>
               </div>
               <div className="text-center">
                 <button
-                  onClick={() => { setPendingVerificationToken(null); setVerifyOtp(''); setAuthError(null); setRegisterEmail(''); }}
+                  onClick={handleLogout}
                   className="text-xs text-slate-400 hover:text-slate-600 hover:underline"
                 >
-                  {t.cancel}
+                  {t.cancel || 'Sign out'}
                 </button>
               </div>
             </div>
@@ -1297,7 +1280,7 @@ const App: React.FC = () => {
             )}
             {authMode === 'login' && (
               <div className="mt-2 text-right">
-                <button type="button" onClick={() => { setForgotOpen(true); setForgotStep('request'); setForgotError(null); }} className="text-sm text-blue-600 hover:underline">{t.forgotPassword || 'Forgot password?'}</button>
+                <button type="button" onClick={() => { setForgotOpen(true); setForgotError(null); }} className="text-sm text-blue-600 hover:underline">{t.forgotPassword || 'Forgot password?'}</button>
               </div>
             )}
             <div className="mt-6 text-center text-[10px] text-slate-500 leading-relaxed px-4">
@@ -1313,27 +1296,17 @@ const App: React.FC = () => {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
               <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 border border-slate-200 dark:border-slate-800">
                 <h3 className="text-lg font-semibold mb-3">{t.resetData || 'Password reset'}</h3>
-                {forgotStep === 'request' && (
-                  <>
-                    <p className="text-sm text-[var(--text-muted)] mb-3">{t.enterEmailForReset || 'Enter your account email and we will send a one-time code.'}</p>
-                    <input value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} className="w-full px-3 py-2 rounded-md border" placeholder={t.email} />
-                    <div className="mt-4 flex gap-2">
-                      <button onClick={handleRequestReset} className="flex-1 rounded-md bg-blue-600 text-white py-2">{t.sendCode || 'Send code'}</button>
-                      <button onClick={() => { setForgotOpen(false); setForgotError(null); }} className="flex-1 rounded-md border py-2">{t.cancel || 'Cancel'}</button>
-                    </div>
-                  </>
-                )}
-                {forgotStep === 'verify' && (
-                  <>
-                    <p className="text-sm text-[var(--text-muted)] mb-3">{t.enterCodeAndNewPassword || 'Enter the code and your new password.'}</p>
-                    <input value={forgotOtp} onChange={e => setForgotOtp(e.target.value)} className="w-full px-3 py-2 rounded-md border mb-2" placeholder={t.code || 'Code'} />
-                    <input value={forgotNewPassword} onChange={e => setForgotNewPassword(e.target.value)} className="w-full px-3 py-2 rounded-md border mb-2" placeholder={t.newPassword || 'New password'} type="password" />
-                    <div className="mt-4 flex gap-2">
-                      <button onClick={handleVerifyAndReset} className="flex-1 rounded-md bg-blue-600 text-white py-2">{t.resetPassword || 'Reset'}</button>
-                      <button onClick={() => { setForgotOpen(false); setForgotStep(null); setForgotError(null); }} className="flex-1 rounded-md border py-2">{t.cancel || 'Cancel'}</button>
-                    </div>
-                  </>
-                )}
+                <p className="text-sm text-[var(--text-muted)] mb-3">{t.enterEmailForReset || 'Enter your account email and we will send a password reset link.'}</p>
+                <input 
+                  value={forgotEmail} 
+                  onChange={e => setForgotEmail(e.target.value)} 
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white" 
+                  placeholder={t.email} 
+                />
+                <div className="mt-6 flex gap-3">
+                  <button onClick={handleRequestReset} className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98]">{t.sendCode || 'Send link'}</button>
+                  <button onClick={() => { setForgotOpen(false); setForgotError(null); }} className="flex-1 py-3 border border-slate-200 dark:border-slate-700 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-[0.98]">{t.cancel || 'Cancel'}</button>
+                </div>
                 {forgotError && <div className="mt-3 text-sm text-red-600">{forgotError}</div>}
               </div>
             </div>

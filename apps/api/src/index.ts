@@ -15,9 +15,27 @@ import bcrypt from 'bcryptjs';
 import { EmailOTP } from './models/EmailOTP.js';
 import { sendEmail, getTransporter } from './utils/mailer.js';
 import { renderOtpEmail } from './utils/emailTemplates.js';
+import admin from 'firebase-admin';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
+// Initialize Firebase Admin
+try {
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) 
+    : undefined;
+
+  if (serviceAccount || process.env.VITE_FIREBASE_PROJECT_ID) {
+    admin.initializeApp({
+      credential: serviceAccount ? admin.credential.cert(serviceAccount) : admin.credential.applicationDefault(),
+      projectId: process.env.VITE_FIREBASE_PROJECT_ID
+    });
+    console.log('Firebase Admin initialized');
+  }
+} catch (error) {
+  console.error('Firebase Admin init error:', error);
+}
 
 type Variables = {
   userId: string;
@@ -75,18 +93,51 @@ app.use('*', cors({
 const authMiddleware = async (c: any, next: any) => {
   const authHeader = c.req.header('Authorization');
   const token = authHeader?.split(' ')[1];
-  const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
   
   if (!token) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
-
+  
   try {
-    const decoded = jwt.verify(token, secret) as any;
-    c.set('userId', decoded.userId);
+    // 1. Try Firebase verification first
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const { uid, email, name } = decodedToken;
+
+    // Sync with local MongoDB User
+    let user = await User.findOne({ firebaseUid: uid });
+    if (!user) {
+      // migration case: try by email
+      user = await User.findOne({ email });
+      if (user) {
+        user.firebaseUid = uid;
+        if (decodedToken.email_verified) user.emailVerified = true;
+        await user.save();
+      } else {
+        // new user
+        user = await User.create({
+          firebaseUid: uid,
+          email,
+          name: name || email?.split('@')[0],
+          emailVerified: decodedToken.email_verified || false
+        });
+      }
+    } else if (decodedToken.email_verified && !user.emailVerified) {
+      user.emailVerified = true;
+      await user.save();
+    }
+
+    c.set('userId', user._id.toString());
     await next();
   } catch (error) {
-    return c.json({ error: 'Invalid token' }, 401);
+    // 2. Fallback to legacy JWT for compatibility
+    try {
+      const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
+      const decoded = jwt.verify(token, secret) as any;
+      c.set('userId', decoded.userId);
+      await next();
+    } catch (err) {
+      return c.json({ error: 'Invalid token' }, 401);
+    }
   }
 };
 

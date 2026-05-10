@@ -13,7 +13,12 @@ const UserSchema = new Schema({
   },
   password: { 
     type: String, 
-    required: true 
+    required: false 
+  },
+  firebaseUid: {
+    type: String,
+    unique: true,
+    sparse: true
   },
   name: { 
     type: String, 
@@ -31,7 +36,7 @@ const UserSchema = new Schema({
 
 // Hash password before saving
 UserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || !this.password) return next();
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
