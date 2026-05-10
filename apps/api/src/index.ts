@@ -207,6 +207,51 @@ api.patch('/preferences', async (c) => {
   return c.json(prefs);
 });
 
+api.post('/translate', async (c) => {
+  await connectDB();
+  const { text, target, source } = await c.req.json();
+
+  if (!text || typeof text !== 'string' || !text.trim()) {
+    return c.json({ error: 'Text is required' }, 400);
+  }
+
+  const normalizedTarget = typeof target === 'string' && ['tr', 'en'].includes(target) ? target : 'tr';
+  const libreTranslateUrl = (process.env.LIBRETRANSLATE_URL || 'https://libretranslate.de/translate').replace(/\/$/, '');
+
+  try {
+    const response = await fetch(libreTranslateUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        q: text.trim(),
+        source: typeof source === 'string' && source ? source : 'auto',
+        target: normalizedTarget,
+        format: 'text',
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      const message = data?.error || data?.message || 'Translation failed';
+      return c.json({ error: message }, 502);
+    }
+
+    const translatedText = data?.translatedText || data?.data?.translations?.[0]?.translatedText || '';
+    const decodedText = typeof translatedText === 'string'
+      ? translatedText
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&#39;/g, "'")
+          .replace(/&quot;/g, '"')
+      : '';
+
+    return c.json({ translatedText: decodedText, target: normalizedTarget });
+  } catch (error) {
+    return c.json({ error: 'Translation request failed' }, 502);
+  }
+});
+
 app.route('/api/v1', api);
 
 const port = Number(process.env.PORT) || 3001;

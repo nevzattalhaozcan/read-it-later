@@ -77,6 +77,7 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activePolicy, setActivePolicy] = useState<'terms' | 'privacy' | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, text: string, highlightId?: string | null } | null>(null);
+  const [translationPopover, setTranslationPopover] = useState<{ x: number, y: number, sourceText: string, translatedText?: string, loading: boolean, error?: string } | null>(null);
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
@@ -503,6 +504,7 @@ const App: React.FC = () => {
       text: context.text,
       highlightId: highlightElement?.getAttribute('data-highlight-id') || null
     });
+    setTranslationPopover(null);
     setHighlightToolbar(null);
     setActiveHighlightPopover(null);
   }, []);
@@ -543,10 +545,50 @@ const App: React.FC = () => {
     closeContextMenu();
   };
 
-  const handleTranslateSelection = () => {
+  const handleTranslateSelection = async () => {
     if (!contextMenu?.text) return;
-    window.open(`https://translate.google.com/?sl=auto&text=${encodeURIComponent(contextMenu.text)}&op=translate`, '_blank', 'noopener,noreferrer');
+
+    const sourceText = contextMenu.text;
+    const target = lang === 'tr' ? 'tr' : 'en';
+    const popoverPosition = { x: contextMenu.x, y: contextMenu.y };
+
+    setTranslationPopover({
+      x: popoverPosition.x,
+      y: popoverPosition.y,
+      sourceText,
+      loading: true,
+    });
     closeContextMenu();
+
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/translate`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ text: sourceText, target, source: 'auto' })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || t.translationFailed);
+      }
+
+      setTranslationPopover({
+        x: popoverPosition.x,
+        y: popoverPosition.y,
+        sourceText,
+        translatedText: data.translatedText || '',
+        loading: false,
+      });
+    } catch (error) {
+      setTranslationPopover({
+        x: popoverPosition.x,
+        y: popoverPosition.y,
+        sourceText,
+        loading: false,
+        error: t.translationFailed,
+      });
+      showToast(t.translationFailed, 'error');
+    }
   };
 
   const createHighlight = (withNote: boolean) => {
@@ -964,6 +1006,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-[var(--bg-card)] text-[var(--text-main)] selection:bg-yellow-200/50 animate-in fade-in duration-300 theme-transition relative" onContextMenu={handleContextMenu} onClick={() => {
         setContextMenu(null);
+        setTranslationPopover(null);
         if (!window.getSelection()?.toString()) {
           setHighlightToolbar(null);
           setActiveHighlightPopover(null);
@@ -1104,6 +1147,43 @@ const App: React.FC = () => {
                 <Languages className="w-4 h-4 text-[var(--text-muted)]" />
                 {t.translateSelection}
               </button>
+            </div>
+          </div>
+        )}
+
+        {translationPopover && (
+          <div
+            className="fixed z-[181] w-80 max-w-[calc(100vw-2rem)] animate-in fade-in zoom-in-95 duration-150"
+            style={{ top: translationPopover.y + 8, left: translationPopover.x + 8 }}
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <div className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-2xl backdrop-blur-md">
+              <div className="flex items-center justify-between gap-3 border-b border-[var(--border-color)] px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{t.translation}</p>
+                  <p className="truncate text-xs text-[var(--text-muted)]">{translationPopover.sourceText}</p>
+                </div>
+                <button
+                  onClick={() => setTranslationPopover(null)}
+                  className="shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)] transition-colors"
+                  title={t.cancel}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="px-4 py-3 text-sm leading-relaxed text-[var(--text-main)]">
+                {translationPopover.loading ? (
+                  <div className="flex items-center gap-2 text-[var(--text-muted)]">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {t.translating}
+                  </div>
+                ) : translationPopover.error ? (
+                  <p className="text-red-600">{translationPopover.error}</p>
+                ) : (
+                  <p className="whitespace-pre-wrap">{translationPopover.translatedText}</p>
+                )}
+              </div>
             </div>
           </div>
         )}
