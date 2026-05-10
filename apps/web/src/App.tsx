@@ -54,7 +54,9 @@ interface TooltipButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const TooltipButton: React.FC<TooltipButtonProps> = ({ tooltip, className = '', children, ...props }) => (
   <span className="group relative inline-flex">
-    <button {...props} className={className} />
+    <button {...props} className={className}>
+      {children}
+    </button>
     <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
       {tooltip}
     </span>
@@ -130,7 +132,7 @@ const App: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
   const prefsLoaded = useRef(false);
-  const lastSyncedPrefs = useRef<{ lang: Lang; theme: Theme }>({ lang: 'tr', theme: 'light' });
+  const lastSyncedPrefs = useRef<{ lang: Lang; theme: Theme; fontSizeIdx: number; widthIdx: number }>({ lang: 'tr', theme: 'light', fontSizeIdx: 2, widthIdx: 1 });
 
   const toggleTheme = () => {
     const themes: Theme[] = ['light', 'dark', 'sepia'];
@@ -182,6 +184,10 @@ const App: React.FC = () => {
   }, [theme]);
 
   useEffect(() => {
+    document.documentElement.style.setProperty('--article-width-idx', String(widthIdx));
+  }, [widthIdx]);
+
+  useEffect(() => {
     if (deepLinkApplied.current || !articles.length || selectedArticle) return;
 
     const params = new URLSearchParams(window.location.search);
@@ -202,14 +208,19 @@ const App: React.FC = () => {
   // Save lang+theme to DB when the user changes them.
   useEffect(() => {
     if (!prefsLoaded.current || !token) return;
-    if (lang === lastSyncedPrefs.current.lang && theme === lastSyncedPrefs.current.theme) return;
-    lastSyncedPrefs.current = { lang, theme };
+    if (
+      lang === lastSyncedPrefs.current.lang &&
+      theme === lastSyncedPrefs.current.theme &&
+      fontSizeIdx === lastSyncedPrefs.current.fontSizeIdx &&
+      widthIdx === lastSyncedPrefs.current.widthIdx
+    ) return;
+    lastSyncedPrefs.current = { lang, theme, fontSizeIdx, widthIdx };
     fetch(PREFS_URL, {
       method: 'PATCH',
       headers: getHeaders(),
-      body: JSON.stringify({ lang, theme })
+      body: JSON.stringify({ lang, theme, fontSizeIdx, widthIdx })
     }).catch(() => {});
-  }, [lang, theme, token]);
+  }, [lang, theme, fontSizeIdx, widthIdx, token]);
 
   useEffect(() => {
     if (!token) {
@@ -271,9 +282,13 @@ const App: React.FC = () => {
       const data = await res.json();
       const newLang  = (data.lang  as Lang)  || 'tr';
       const newTheme = (data.theme as Theme) || 'light';
-      lastSyncedPrefs.current = { lang: newLang, theme: newTheme };
+      const newFontSizeIdx = Number.isFinite(Number(data.fontSizeIdx)) ? Number(data.fontSizeIdx) : 2;
+      const newWidthIdx = Number.isFinite(Number(data.widthIdx)) ? Number(data.widthIdx) : 1;
+      lastSyncedPrefs.current = { lang: newLang, theme: newTheme, fontSizeIdx: newFontSizeIdx, widthIdx: newWidthIdx };
       setLang(newLang);
       setTheme(newTheme);
+      setFontSizeIdx(newFontSizeIdx);
+      setWidthIdx(newWidthIdx);
     } catch (_) {} finally {
       prefsLoaded.current = true;
     }

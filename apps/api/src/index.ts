@@ -191,7 +191,7 @@ api.get('/preferences', async (c) => {
   await connectDB();
   const userId = c.get('userId');
   const prefs = await UserPreferences.findOne({ userId });
-  return c.json(prefs ?? { lang: 'tr', theme: 'light' });
+  return c.json(prefs ?? { lang: 'tr', theme: 'light', fontSizeIdx: 2, widthIdx: 1 });
 });
 
 api.patch('/preferences', async (c) => {
