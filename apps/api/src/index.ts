@@ -216,41 +216,31 @@ api.post('/translate', async (c) => {
   }
 
   const normalizedTarget = typeof target === 'string' && ['tr', 'en'].includes(target) ? target : 'tr';
-  const configuredUrl = (process.env.LIBRETRANSLATE_URL || 'https://de.libretranslate.com/translate').replace(/\/$/, '');
-  const libreTranslateUrl = configuredUrl.endsWith('/translate') ? configuredUrl : `${configuredUrl}/translate`;
-  const libreTranslateApiKey = process.env.LIBRETRANSLATE_API_KEY;
+  const sourceText = text.trim();
 
   try {
-    const payload: Record<string, string> = {
-      q: text.trim(),
-      source: typeof source === 'string' && source ? source : 'auto',
-      target: normalizedTarget,
-      format: 'text',
-    };
-    if (libreTranslateApiKey) {
-      payload.api_key = libreTranslateApiKey;
-    }
+    const translateUrl = new URL('https://translate.googleapis.com/translate_a/single');
+    translateUrl.searchParams.set('client', 'gtx');
+    translateUrl.searchParams.set('sl', 'auto');
+    translateUrl.searchParams.set('tl', normalizedTarget);
+    translateUrl.searchParams.set('dt', 't');
+    translateUrl.searchParams.set('q', sourceText);
 
-    const response = await fetch(libreTranslateUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(payload)
+    const response = await fetch(translateUrl.toString(), {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
     });
 
-    const rawBody = await response.text();
-    let data: any = null;
-    try {
-      data = rawBody ? JSON.parse(rawBody) : null;
-    } catch {
-      data = null;
-    }
+    const data = await response.json();
 
     if (!response.ok) {
       const message = data?.error || data?.message || `Translation failed (${response.status})`;
       return c.json({ error: message }, 502);
     }
 
-    const translatedText = data?.translatedText || data?.data?.translations?.[0]?.translatedText || '';
+    const translatedText = Array.isArray(data?.[0])
+      ? data[0].map((segment: any[]) => segment?.[0] || '').join('')
+      : '';
     const decodedText = typeof translatedText === 'string'
       ? translatedText
           .replace(/&amp;/g, '&')
@@ -261,10 +251,11 @@ api.post('/translate', async (c) => {
       : '';
 
     if (!decodedText.trim()) {
-      return c.json({ error: 'Translation provider returned an empty result. Check LIBRETRANSLATE_URL and LIBRETRANSLATE_API_KEY.' }, 502);
+      return c.json({ error: 'Translation provider returned an empty result.' }, 502);
     }
 
-    return c.json({ translatedText: decodedText, target: normalizedTarget });
+    const detectedSource = typeof data?.[2] === 'string' ? data[2] : 'auto';
+    return c.json({ translatedText: decodedText, target: normalizedTarget, source: detectedSource });
   } catch (error) {
     return c.json({ error: 'Translation request failed' }, 502);
   }
