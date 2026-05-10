@@ -69,7 +69,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({ tooltip, placement = 'bot
       {children}
     </button>
     {tooltip && (
-      <span className={`pointer-events-none absolute left-1/2 z-[1000] -translate-x-1/2 whitespace-nowrap rounded-xl border border-slate-700/50 bg-slate-950 px-2.5 py-1.5 text-[11px] font-medium tracking-wide text-white shadow-xl opacity-0 scale-95 transition-all duration-150 ease-out group-hover:scale-100 group-hover:opacity-100 group-focus-within:scale-100 group-focus-within:opacity-100 ${placement === 'top' ? 'bottom-full mb-2 translate-y-1 group-hover:translate-y-0 group-focus-within:translate-y-0' : 'top-full mt-2 -translate-y-1 group-hover:translate-y-0 group-focus-within:translate-y-0'}`}>
+      <span className={`hidden lg:block pointer-events-none absolute left-1/2 z-[1000] -translate-x-1/2 whitespace-nowrap rounded-xl border border-slate-700/50 bg-slate-950 px-2.5 py-1.5 text-[11px] font-medium tracking-wide text-white shadow-xl opacity-0 scale-95 transition-all duration-150 ease-out group-hover:scale-100 group-hover:opacity-100 group-focus-within:scale-100 group-focus-within:opacity-100 ${placement === 'top' ? 'bottom-full mb-2 translate-y-1 group-hover:translate-y-0 group-focus-within:translate-y-0' : 'top-full mt-2 -translate-y-1 group-hover:translate-y-0 group-focus-within:translate-y-0'}`}>
         {tooltip}
         <span className={`absolute left-1/2 -translate-x-1/2 border-4 border-transparent ${placement === 'top' ? 'top-full border-t-slate-950' : 'bottom-full border-b-slate-950'}`} />
       </span>
@@ -170,6 +170,9 @@ const App: React.FC = () => {
         setIsAddUrlActive(false);
         setUrlError(null);
       }
+
+      // Close context menu on any click outside
+      setContextMenu(null);
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -762,6 +765,9 @@ const App: React.FC = () => {
   }, []);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    // If left button is still down (selection in progress), don't show context menu
+    if (e.buttons & 1) return;
+    
     e.preventDefault();
 
     const selection = window.getSelection();
@@ -1473,49 +1479,45 @@ const App: React.FC = () => {
               </TooltipButton>
 
               {isArticleMenuOpen && (
-                <div className="absolute z-[300] glass rounded-2xl shadow-2xl py-2 animate-in duration-150 sm:block
-                  sm:right-full sm:top-1/2 sm:-translate-y-1/2 sm:mr-3 sm:w-48 sm:origin-right sm:slide-in-from-right-2
+                <div className="absolute z-[300] glass rounded-2xl shadow-2xl py-2 animate-in duration-150
+                  sm:right-full sm:top-1/2 sm:-translate-y-1/2 sm:mr-3 sm:w-auto sm:origin-right sm:slide-in-from-right-2
                   top-full right-0 mt-2 w-auto flex flex-col items-center px-1.5 min-w-[44px] origin-top slide-in-from-top-2">
                   
                   <button 
                     onClick={() => { updateArticle(selectedArticle._id, { isFavorite: !selectedArticle.isFavorite }); setIsArticleMenuOpen(false); }} 
-                    className="w-full flex items-center justify-center sm:justify-start gap-2 p-2.5 sm:px-4 sm:py-2 hover:bg-blue-600/5 rounded-xl transition-colors group"
+                    className="w-full flex items-center justify-center gap-2 p-2.5 hover:bg-blue-600/5 rounded-xl transition-colors group"
                   >
                     <Star className={`w-4 h-4 transition-all group-active:scale-125 ${selectedArticle.isFavorite ? 'text-amber-500 fill-current' : 'text-[var(--text-muted)]'}`} /> 
-                    <span className="hidden sm:inline text-sm font-medium">{selectedArticle.isFavorite ? t.removeFavorite : t.favorite}</span>
                   </button>
 
                   <button 
                     onClick={() => { window.open(selectedArticle.url, '_blank', 'noopener,noreferrer'); setIsArticleMenuOpen(false); }} 
-                    className="w-full flex items-center justify-center sm:justify-start gap-2 p-2.5 sm:px-4 sm:py-2 hover:bg-blue-600/5 rounded-xl transition-colors"
+                    className="w-full flex items-center justify-center gap-2 p-2.5 hover:bg-blue-600/5 rounded-xl transition-colors"
                   >
                     <ExternalLink className="w-4 h-4 text-[var(--text-muted)]" /> 
-                    <span className="hidden sm:inline text-sm font-medium">{t.original}</span>
                   </button>
 
                   <button 
                     onClick={() => { updateArticle(selectedArticle._id, { isArchived: !selectedArticle.isArchived }); setIsArticleMenuOpen(false); }} 
-                    className="w-full flex items-center justify-center sm:justify-start gap-2 p-2.5 sm:px-4 sm:py-2 hover:bg-blue-600/5 rounded-xl transition-colors"
+                    className="w-full flex items-center justify-center gap-2 p-2.5 hover:bg-blue-600/5 rounded-xl transition-colors"
                   >
                     <Archive className="w-4 h-4 text-[var(--text-muted)]" /> 
-                    <span className="hidden sm:inline text-sm font-medium">{selectedArticle.isArchived ? t.unarchive : t.archiveArticle}</span>
                   </button>
 
                   <div className="h-px bg-[var(--border-color)] my-1.5 w-8 sm:w-full" />
 
                   <button 
                     onClick={() => { handleDelete(selectedArticle._id); setIsArticleMenuOpen(false); }} 
-                    className="w-full flex items-center justify-center sm:justify-start gap-2 p-2.5 sm:px-4 sm:py-2 hover:bg-red-500/5 rounded-xl transition-colors text-red-600"
+                    className="w-full flex items-center justify-center gap-2 p-2.5 hover:bg-red-500/5 rounded-xl transition-colors text-red-600"
                   >
                     <Trash2 className="w-4 h-4" /> 
-                    <span className="hidden sm:inline text-sm font-medium">{t.delete}</span>
                   </button>
                 </div>
               )}
             </div>
           </div>
         </nav>
-        <article className={`${['max-w-xl','max-w-2xl','max-w-3xl'][widthIdx]} mx-auto px-4 py-12 md:py-20 relative`}>
+        <article className={`${['max-w-xl','max-w-2xl','max-w-3xl'][widthIdx]} mx-auto px-4 pt-12 pb-32 md:pt-20 md:pb-32 relative`}>
           <header className="mb-12">
             <div className="flex items-center gap-3 text-[var(--text-muted)] text-sm font-medium mb-6">
               <span className="bg-[var(--border-color)] px-2 py-1 rounded text-xs tracking-wider">{selectedArticle.siteName || new URL(selectedArticle.url).hostname}</span>
@@ -1567,6 +1569,21 @@ const App: React.FC = () => {
               >
                 <Languages className="w-4 h-4 text-[var(--text-muted)]" />
                 {t.translateSelection}
+              </button>
+              <div className="my-1 h-px bg-[var(--border-color)]" />
+              <button
+                onClick={() => { createHighlight(false); setContextMenu(null); }}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
+              >
+                <Highlighter className="w-4 h-4 text-blue-600" />
+                {t.highlight}
+              </button>
+              <button
+                onClick={() => { createHighlight(true); setContextMenu(null); }}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
+              >
+                <MessageSquarePlus className="w-4 h-4 text-blue-600" />
+                {t.addNote}
               </button>
             </div>
           </div>
@@ -2045,7 +2062,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Bottom Nav (Mobile Only) */}
-          <nav className="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-[var(--border-color)] px-6 py-3 pb-[calc(12px+var(--safe-area-bottom))] flex items-center justify-between z-[200] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-x-0 border-b-0 border-[var(--border-color)] px-6 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] flex items-center justify-between z-[200] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
             <button 
               onClick={() => { setActiveFilter({ type: 'all' }); setIsLibraryOpen(false); setIsSettingsOpen(false); }}
               className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'all' && !isLibraryOpen && !isSettingsOpen ? 'text-blue-600 scale-110' : 'text-[var(--text-muted)]'}`}
