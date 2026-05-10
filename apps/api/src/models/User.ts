@@ -19,6 +19,10 @@ const UserSchema = new Schema({
     type: String, 
     trim: true 
   },
+  emailVerified: {
+    type: Boolean,
+    default: false,
+  },
   createdAt: { 
     type: Date, 
     default: Date.now 

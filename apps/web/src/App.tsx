@@ -78,6 +78,12 @@ const App: React.FC = () => {
   const [user, setUser] = useState<{ id: string, email: string, name?: string } | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotStep, setForgotStep] = useState<'request' | 'verify' | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activePolicy, setActivePolicy] = useState<'terms' | 'privacy' | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, text: string, highlightId?: string | null } | null>(null);
@@ -147,6 +153,53 @@ const App: React.FC = () => {
     setTheme(next);
   };
 
+  // Forgot password flow: request OTP -> verify & reset
+  const handleRequestReset = async () => {
+    setAuthError(null);
+    if (!emailRegex.test(forgotEmail)) {
+      setAuthError(t.invalidEmail || 'Invalid email');
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await fetch(`${AUTH_URL}/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail, purpose: 'reset' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed to send code');
+      setForgotStep('verify');
+      showToast(t.resetDataDone || 'Code sent — check your email');
+    } catch (err: any) {
+      setAuthError(err?.message || t.errorOccurred);
+    } finally { setLoading(false); }
+  };
+
+  const handleVerifyAndReset = async () => {
+    setAuthError(null);
+    if (!forgotOtp || !forgotNewPassword) {
+      setAuthError(t.fillAllFields || 'Please fill in all fields');
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await fetch(`${AUTH_URL}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail, otp: forgotOtp, newPassword: forgotNewPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Reset failed');
+      showToast(t.passwordUpdated || 'Password updated');
+      setForgotOpen(false);
+      setForgotStep(null);
+      setForgotEmail(''); setForgotOtp(''); setForgotNewPassword('');
+    } catch (err: any) {
+      setAuthError(err?.message || t.errorOccurred);
+    } finally { setLoading(false); }
+  };
+
   const toggleLang = () => setLang(lang === 'tr' ? 'en' : 'tr');
 
   const numToWords = (n: number, currentLang: 'tr' | 'en'): string => {
@@ -179,6 +232,7 @@ const App: React.FC = () => {
   const API_URL   = `${API_BASE}/api/v1/articles`;
   const PREFS_URL = `${API_BASE}/api/v1/preferences`;
   const AUTH_URL  = `${API_BASE}/api/v1/auth`;
+  const emailRegex = /^[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}$/;
   const WS_URL    = `${API_BASE.replace(/^https?/, (m: string) => m === 'https' ? 'wss' : 'ws')}/ws`;
   
   const getHeaders = () => ({
@@ -308,6 +362,16 @@ const App: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError(null);
+    if (!emailRegex.test(authForm.email)) {
+      setAuthError(t.invalidEmail || 'Invalid email');
+      return;
+    }
+    if (!authForm.password || authForm.password.length < 6) {
+      setAuthError(t.passwordTooShort || 'Password must be at least 6 characters');
+      return;
+    }
+    setLoading(true);
     try {
       const res = await fetch(`${AUTH_URL}/login`, {
         method: 'POST',
@@ -321,13 +385,29 @@ const App: React.FC = () => {
         setUser(data.user);
         showToast(t.welcomeBack);
       } else {
-        showToast(data.error || t.invalidCredentials, 'error');
+        setAuthError(data.error || t.invalidCredentials || 'Invalid credentials');
       }
-    } catch (err) { showToast(t.connectionError, 'error'); }
+    } catch (err) {
+      setAuthError(t.connectionError);
+    } finally { setLoading(false); }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError(null);
+    if (!authForm.name?.trim()) {
+      setAuthError(t.nameRequired || 'Name is required');
+      return;
+    }
+    if (!emailRegex.test(authForm.email)) {
+      setAuthError(t.invalidEmail || 'Invalid email');
+      return;
+    }
+    if (!authForm.password || authForm.password.length < 6) {
+      setAuthError(t.passwordTooShort || 'Password must be at least 6 characters');
+      return;
+    }
+    setLoading(true);
     try {
       const res = await fetch(`${AUTH_URL}/register`, {
         method: 'POST',
@@ -341,9 +421,9 @@ const App: React.FC = () => {
         setUser(data.user);
         showToast(t.updatedSuccessfully);
       } else {
-        showToast(data.error || t.errorOccurred, 'error');
+        setAuthError(data.error || t.errorOccurred || 'Registration failed');
       }
-    } catch (err) { showToast(t.connectionError, 'error'); }
+    } catch (err) { setAuthError(t.connectionError); } finally { setLoading(false); }
   };
 
   const handleLogout = () => {
@@ -1098,6 +1178,14 @@ const App: React.FC = () => {
             >
               {authMode === 'login' ? t.login : t.register}
             </button>
+            {authError && (
+              <div className="mt-3 text-center text-sm text-red-600">{authError}</div>
+            )}
+            {authMode === 'login' && (
+              <div className="mt-2 text-right">
+                <button type="button" onClick={() => { setForgotOpen(true); setForgotStep('request'); }} className="text-sm text-blue-600 hover:underline">{t.forgotPassword || 'Forgot password?'}</button>
+              </div>
+            )}
             <div className="mt-6 text-center text-[10px] text-slate-500 leading-relaxed px-4">
               {lang === 'tr' ? (
                 <>Devam ederek <button type="button" onClick={() => setActivePolicy('terms')} className="text-blue-600 hover:underline font-bold">Kullanım Koşulları</button> ve <button type="button" onClick={() => setActivePolicy('privacy')} className="text-blue-600 hover:underline font-bold">Gizlilik Politikası</button>'nı kabul etmiş olursunuz.</>
@@ -1106,6 +1194,36 @@ const App: React.FC = () => {
               )}
             </div>
           </form>
+
+          {forgotOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+              <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 border border-slate-200 dark:border-slate-800">
+                <h3 className="text-lg font-semibold mb-3">{t.resetData || 'Password reset'}</h3>
+                {forgotStep === 'request' && (
+                  <>
+                    <p className="text-sm text-[var(--text-muted)] mb-3">{t.enterEmailForReset || 'Enter your account email and we will send a one-time code.'}</p>
+                    <input value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} className="w-full px-3 py-2 rounded-md border" placeholder={t.email} />
+                    <div className="mt-4 flex gap-2">
+                      <button onClick={handleRequestReset} className="flex-1 rounded-md bg-blue-600 text-white py-2">{t.sendCode || 'Send code'}</button>
+                      <button onClick={() => setForgotOpen(false)} className="flex-1 rounded-md border py-2">{t.cancel || 'Cancel'}</button>
+                    </div>
+                  </>
+                )}
+                {forgotStep === 'verify' && (
+                  <>
+                    <p className="text-sm text-[var(--text-muted)] mb-3">{t.enterCodeAndNewPassword || 'Enter the code and your new password.'}</p>
+                    <input value={forgotOtp} onChange={e => setForgotOtp(e.target.value)} className="w-full px-3 py-2 rounded-md border mb-2" placeholder={t.code || 'Code'} />
+                    <input value={forgotNewPassword} onChange={e => setForgotNewPassword(e.target.value)} className="w-full px-3 py-2 rounded-md border mb-2" placeholder={t.newPassword || 'New password'} type="password" />
+                    <div className="mt-4 flex gap-2">
+                      <button onClick={handleVerifyAndReset} className="flex-1 rounded-md bg-blue-600 text-white py-2">{t.resetPassword || 'Reset'}</button>
+                      <button onClick={() => { setForgotOpen(false); setForgotStep(null); }} className="flex-1 rounded-md border py-2">{t.cancel || 'Cancel'}</button>
+                    </div>
+                  </>
+                )}
+                {authError && <div className="mt-3 text-sm text-red-600">{authError}</div>}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

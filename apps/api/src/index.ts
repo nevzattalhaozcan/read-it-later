@@ -12,6 +12,8 @@ import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { EmailOTP } from './models/EmailOTP.js';
+import { sendEmail } from './utils/mailer.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -101,6 +103,80 @@ app.post('/api/v1/auth/login', async (c) => {
     return c.json({ token, user: { id: user._id, email, name: user.name } });
   } catch (error) {
     return c.json({ error: 'Login failed' }, 500);
+  }
+});
+
+// OTP endpoints (send and verify)
+app.post('/api/v1/auth/send-otp', async (c) => {
+  await connectDB();
+  const { email, purpose } = await c.req.json();
+  if (!email || !purpose) return c.json({ error: 'Email and purpose are required' }, 400);
+
+  try {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    const otp = new EmailOTP({ email: email.trim().toLowerCase(), code, purpose, expiresAt });
+    await otp.save();
+
+    const subject = purpose === 'reset' ? 'Your password reset code' : 'Your verification code';
+    const text = `Your one-time code is: ${code}. It expires in 10 minutes.`;
+
+    const { preview } = await sendEmail({ to: email, subject, text });
+    return c.json({ success: true, preview });
+  } catch (error: any) {
+    return c.json({ error: 'Failed to send OTP' }, 500);
+  }
+});
+
+app.post('/api/v1/auth/verify-otp', async (c) => {
+  await connectDB();
+  const { email, otp, purpose } = await c.req.json();
+  if (!email || !otp || !purpose) return c.json({ error: 'Missing parameters' }, 400);
+
+  try {
+    const record = await EmailOTP.findOne({ email: email.trim().toLowerCase(), code: otp, purpose, used: false, expiresAt: { $gt: new Date() } });
+    if (!record) return c.json({ error: 'Invalid or expired code' }, 400);
+
+    record.used = true;
+    await record.save();
+
+    if (purpose === 'verify') {
+      // Mark user as verified
+      const user = await User.findOne({ email: email.trim().toLowerCase() });
+      if (user) {
+        user.emailVerified = true;
+        await user.save();
+      }
+    }
+
+    return c.json({ success: true });
+  } catch (error: any) {
+    return c.json({ error: 'Verification failed' }, 500);
+  }
+});
+
+app.post('/api/v1/auth/reset-password', async (c) => {
+  await connectDB();
+  const { email, otp, newPassword } = await c.req.json();
+  if (!email || !otp || !newPassword) return c.json({ error: 'Missing parameters' }, 400);
+
+  try {
+    const record = await EmailOTP.findOne({ email: email.trim().toLowerCase(), code: otp, purpose: 'reset', used: false, expiresAt: { $gt: new Date() } });
+    if (!record) return c.json({ error: 'Invalid or expired code' }, 400);
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    if (!user) return c.json({ error: 'User not found' }, 404);
+
+    user.password = newPassword.trim();
+    await user.save();
+
+    record.used = true;
+    await record.save();
+
+    return c.json({ success: true });
+  } catch (error: any) {
+    return c.json({ error: 'Password reset failed' }, 500);
   }
 });
 
