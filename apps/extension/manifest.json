@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "ReadIt Later Saver",
+  "version": "1.0",
+  "description": "Quickly save articles to your ReadIt Later app.",
+  "permissions": ["activeTab", "scripting"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "host_permissions": ["http://localhost/*"]
+}

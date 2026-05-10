@@ -1,0 +1,7 @@
+[build]
+buildCommand = "cd ../.. && npm install && npm run build:api"
+
+[deploy]
+startCommand = "node apps/api/dist/index.js"
+restartPolicyType = "on-failure"
+restartPolicyMaxRetries = 5

@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-sidebar: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #f1f5f9;
+  --accent-color: #2563eb;
+  --highlight-color: rgba(250, 204, 21, 0.4);
+  --highlight-hover: rgba(250, 204, 21, 0.6);
+  --note-indicator-color: #eab308;
+}
+
+[data-theme='dark'] {
+  --bg-main: #020617;
+  --bg-card: #0f172a;
+  --bg-sidebar: #0f172a;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-color: #1e293b;
+  --accent-color: #3b82f6;
+  --highlight-color: rgba(59, 130, 246, 0.25);
+  --highlight-hover: rgba(59, 130, 246, 0.45);
+  --note-indicator-color: #3b82f6;
+}
+
+[data-theme='sepia'] {
+  --bg-main: #f4ecd8;
+  --bg-card: #fdf6e3;
+  --bg-sidebar: #fdf6e3;
+  --text-main: #5b4636;
+  --text-muted: #8c786a;
+  --border-color: #e6dec9;
+  --accent-color: #b58900;
+  --highlight-color: rgba(245, 158, 11, 0.3);
+  --highlight-hover: rgba(245, 158, 11, 0.5);
+  --note-indicator-color: #d97706;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  text-transform: lowercase;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Exemptions for article content and user notes to preserve readability */
+article h1,
+article .prose,
+article header,
+.article-title,
+.article-description,
+.highlight-text,
+blockquote {
+  text-transform: none;
+}
+
+/* Specific UI elements that should stay lowercase but might be nested in exemptions */
+button, 
+nav, 
+aside, 
+span:not(.article-meta),
+label {
+  text-transform: lowercase;
+}
+
+.theme-transition {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, shadow 0.3s ease;
+}
+
+/* Highlight styles */
+mark.article-highlight {
+  background-color: var(--highlight-color);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  padding: 1px 0;
+  position: relative;
+}
+
+mark.article-highlight:hover,
+mark.article-highlight.is-hovered {
+  background-color: var(--highlight-hover);
+}
+
+mark.article-highlight.has-note {
+  border-bottom: 2px dashed var(--note-indicator-color);
+}
+
+/* Note indicators will be rendered as separate elements now */
+
+/* Floating toolbar */
+.highlight-toolbar {
+  position: absolute;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px -5px rgba(0,0,0,0.15);
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
+  animation: toolbar-pop 0.15s ease-out;
+}
+
+.highlight-toolbar button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.highlight-toolbar button:hover {
+  background: var(--border-color);
+  color: var(--text-main);
+}
+
+.highlight-toolbar .divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color);
+  margin: 0 2px;
+}
+
+@keyframes toolbar-pop {
+  from { opacity: 0; transform: translate(-50%, -100%) translateY(4px) scale(0.95); }
+  to { opacity: 1; transform: translate(-50%, -100%) translateY(0) scale(1); }
+}
+
+/* Custom scrollbar for better theme support */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
