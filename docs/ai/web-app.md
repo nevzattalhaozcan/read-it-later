@@ -74,7 +74,6 @@ All state lives in the `App` component. Key state variables:
 | `selectedArticle` | `Article \| null` | Currently open article |
 | `activeFilter` | `{ type, value? }` | Sidebar navigation filter |
 | `searchQuery` | `string` | Full-text search input |
-| `expandedArticles` | `string[]` | IDs of cards with expanded metadata |
 
 ### Highlighting & Notes
 | State | Type | Purpose |
@@ -119,8 +118,6 @@ PATCH to API + optimistically updates both `articles` array and `selectedArticle
 ### `fetchArticles()` / `fetchPreferences()` / `fetchUser()`
 Plain fetch calls. Called on token mount and triggered by WebSocket messages.
 
-### `handleLogout()`
-Clears localStorage token, resets all auth/article state.
 
 ### Auth Handlers (Firebase)
 - `onAuthStateChanged` — Global listener. Auto-syncs `token` and `pendingVerificationToken`.
