@@ -1468,7 +1468,45 @@ const App: React.FC = () => {
             </div>
 
             {/* Sağ: açılır menü + üç nokta */}
-            <div className="flex items-center gap-1 relative" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+              <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isArticleMenuOpen ? 'max-w-[300px] opacity-100 mr-2' : 'max-w-0 opacity-0 mr-0'}`}>
+                <div className="flex items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
+                  <TooltipButton 
+                    onClick={() => { updateArticle(selectedArticle._id, { isFavorite: !selectedArticle.isFavorite }); setIsArticleMenuOpen(false); }} 
+                    tooltip={selectedArticle.isFavorite ? t.removeFavorite : t.favorite}
+                    className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors group"
+                  >
+                    <Star className={`w-4 h-4 transition-all group-active:scale-125 ${selectedArticle.isFavorite ? 'text-amber-500 fill-current' : ''}`} /> 
+                  </TooltipButton>
+
+                  <TooltipButton 
+                    onClick={() => { window.open(selectedArticle.url, '_blank', 'noopener,noreferrer'); setIsArticleMenuOpen(false); }} 
+                    tooltip={t.menuSource || t.original}
+                    className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4" /> 
+                  </TooltipButton>
+
+                  <TooltipButton 
+                    onClick={() => { updateArticle(selectedArticle._id, { isArchived: !selectedArticle.isArchived }); setIsArticleMenuOpen(false); }} 
+                    tooltip={selectedArticle.isArchived ? t.unarchive : t.archiveArticle}
+                    className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors"
+                  >
+                    <Archive className="w-4 h-4" /> 
+                  </TooltipButton>
+
+                  <div className="w-px h-4 bg-[var(--border-color)] mx-1" />
+
+                  <TooltipButton 
+                    onClick={() => { handleDelete(selectedArticle._id); setIsArticleMenuOpen(false); }} 
+                    tooltip={t.delete}
+                    className="w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" /> 
+                  </TooltipButton>
+                </div>
+              </div>
+
               <TooltipButton 
                 onClick={() => setIsArticleMenuOpen(!isArticleMenuOpen)}
                 className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${isArticleMenuOpen ? 'bg-slate-800 text-white' : 'bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
@@ -1477,43 +1515,6 @@ const App: React.FC = () => {
               >
                 {isArticleMenuOpen ? <X className="w-5 h-5" /> : <MoreVertical className="w-5 h-5" />}
               </TooltipButton>
-
-              {isArticleMenuOpen && (
-                <div className="absolute z-[300] glass rounded-2xl shadow-2xl py-2 animate-in duration-150
-                  sm:right-full sm:top-1/2 sm:-translate-y-1/2 sm:mr-3 sm:w-auto sm:origin-right sm:slide-in-from-right-2
-                  top-full right-0 mt-2 w-auto flex flex-col items-center px-1.5 min-w-[44px] origin-top slide-in-from-top-2">
-                  
-                  <button 
-                    onClick={() => { updateArticle(selectedArticle._id, { isFavorite: !selectedArticle.isFavorite }); setIsArticleMenuOpen(false); }} 
-                    className="w-full flex items-center justify-center gap-2 p-2.5 hover:bg-blue-600/5 rounded-xl transition-colors group"
-                  >
-                    <Star className={`w-4 h-4 transition-all group-active:scale-125 ${selectedArticle.isFavorite ? 'text-amber-500 fill-current' : 'text-[var(--text-muted)]'}`} /> 
-                  </button>
-
-                  <button 
-                    onClick={() => { window.open(selectedArticle.url, '_blank', 'noopener,noreferrer'); setIsArticleMenuOpen(false); }} 
-                    className="w-full flex items-center justify-center gap-2 p-2.5 hover:bg-blue-600/5 rounded-xl transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4 text-[var(--text-muted)]" /> 
-                  </button>
-
-                  <button 
-                    onClick={() => { updateArticle(selectedArticle._id, { isArchived: !selectedArticle.isArchived }); setIsArticleMenuOpen(false); }} 
-                    className="w-full flex items-center justify-center gap-2 p-2.5 hover:bg-blue-600/5 rounded-xl transition-colors"
-                  >
-                    <Archive className="w-4 h-4 text-[var(--text-muted)]" /> 
-                  </button>
-
-                  <div className="h-px bg-[var(--border-color)] my-1.5 w-8 sm:w-full" />
-
-                  <button 
-                    onClick={() => { handleDelete(selectedArticle._id); setIsArticleMenuOpen(false); }} 
-                    className="w-full flex items-center justify-center gap-2 p-2.5 hover:bg-red-500/5 rounded-xl transition-colors text-red-600"
-                  >
-                    <Trash2 className="w-4 h-4" /> 
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </nav>
