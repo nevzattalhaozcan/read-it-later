@@ -144,6 +144,7 @@ export const translations = {
     checkEmailInstructions: 'E-postanıza bir doğrulama linki gönderdik. Lütfen linke tıkladıktan sonra devam etmek için aşağıdaki butona basın.',
     checkVerificationStatus: 'E-postamı doğruladım',
     addNewArticle: 'Yeni makale ekle',
+    library: 'Kütüphane',
   },
   en: {
     appName: 'sonra-okurum',
@@ -288,5 +289,6 @@ export const translations = {
     checkEmailInstructions: 'We sent a verification link to your email. Please click the link in your email and then click the button below to continue.',
     checkVerificationStatus: 'I have verified my email',
     addNewArticle: 'Add new article',
+    library: 'Library',
   }
 };

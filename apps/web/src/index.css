@@ -13,8 +13,8 @@
   --highlight-color: rgba(250, 204, 21, 0.4);
   --highlight-hover: rgba(250, 204, 21, 0.6);
   --note-indicator-color: #eab308;
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(248, 250, 252, 0.85);
+  --glass-border: rgba(15, 23, 42, 0.05);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -29,7 +29,7 @@
   --highlight-color: rgba(59, 130, 246, 0.25);
   --highlight-hover: rgba(59, 130, 246, 0.45);
   --note-indicator-color: #3b82f6;
-  --glass-bg: rgba(15, 23, 42, 0.8);
+  --glass-bg: rgba(2, 6, 23, 0.85);
   --glass-border: rgba(255, 255, 255, 0.05);
 }
 

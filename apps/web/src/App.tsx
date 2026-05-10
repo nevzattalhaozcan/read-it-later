@@ -136,6 +136,7 @@ const App: React.FC = () => {
   const [targetHighlightId, setTargetHighlightId] = useState<string | null>(null);
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [isArticleMenuOpen, setIsArticleMenuOpen] = useState(false);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [fontSizeIdx, setFontSizeIdx] = useState(2);
   const [widthIdx, setWidthIdx] = useState(1);
   const deepLinkApplied = useRef(false);
@@ -1754,7 +1755,7 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="hidden sm:flex items-center gap-3">
+            <div className="flex sm:hidden lg:hidden items-center gap-3">
               <button onClick={openSettingsPage} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">
                 <Settings className="w-5 h-5" />
               </button>
@@ -1778,7 +1779,7 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {loading ? (
                   <div className="col-span-full flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="w-8 h-8 text-blue-600 animate-spin" /><p className="text-[var(--text-muted)] font-medium">{t.loading}</p></div>
                 ) : activeFilter.type === 'highlights' ? (
@@ -1795,7 +1796,7 @@ const App: React.FC = () => {
                               <MoreHorizontal className="w-5 h-5" />
                             </button>
                             {activeMenuId === article._id && (
-                              <div className="absolute right-0 mt-2 w-52 glass rounded-2xl shadow-2xl z-50 py-2 animate-in zoom-in-95 duration-100 origin-top-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="absolute right-0 mt-2 w-52 glass rounded-2xl shadow-2xl z-[100] py-2 animate-in zoom-in-95 duration-100 origin-top-right" onClick={(e) => e.stopPropagation()}>
                                 <button onClick={() => setEditArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Edit3 className="w-4 h-4 text-[var(--text-muted)]" /> {t.editArticle}</button>
                                 <button onClick={() => setTagModalArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Tag className="w-4 h-4 text-[var(--text-muted)]" /> {t.manageTags}</button>
                                 <button onClick={() => setFolderModalArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Move className="w-4 h-4 text-[var(--text-muted)]" /> {t.moveToFolder}</button>
@@ -1828,25 +1829,32 @@ const App: React.FC = () => {
           {/* Bottom Nav (Mobile Only) */}
           <nav className="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-[var(--border-color)] px-6 py-3 pb-[calc(12px+var(--safe-area-bottom))] flex items-center justify-between z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
             <button 
-              onClick={() => { setActiveFilter({ type: 'all' }); setIsSettingsOpen(false); }}
-              className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'all' && !isSettingsOpen ? 'text-blue-600 scale-110' : 'text-[var(--text-muted)]'}`}
+              onClick={() => { setActiveFilter({ type: 'all' }); setIsLibraryOpen(false); setIsSettingsOpen(false); }}
+              className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'all' && !isLibraryOpen && !isSettingsOpen ? 'text-blue-600 scale-110' : 'text-[var(--text-muted)]'}`}
             >
               <Inbox className="w-5 h-5" />
               <span className="text-[10px] font-black uppercase tracking-tight">{t.inbox}</span>
             </button>
             <button 
-              onClick={() => { setActiveFilter({ type: 'favorite' }); setIsSettingsOpen(false); }}
-              className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'favorite' ? 'text-amber-500 scale-110' : 'text-[var(--text-muted)]'}`}
+              onClick={() => { setActiveFilter({ type: 'favorite' }); setIsLibraryOpen(false); setIsSettingsOpen(false); }}
+              className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'favorite' && !isLibraryOpen && !isSettingsOpen ? 'text-amber-500 scale-110' : 'text-[var(--text-muted)]'}`}
             >
               <Star className={`w-5 h-5 ${activeFilter.type === 'favorite' ? 'fill-current' : ''}`} />
               <span className="text-[10px] font-black uppercase tracking-tight">{t.favorites}</span>
             </button>
             <button 
-              onClick={() => { setActiveFilter({ type: 'archive' }); setIsSettingsOpen(false); }}
-              className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'archive' ? 'text-slate-800 dark:text-slate-200 scale-110' : 'text-[var(--text-muted)]'}`}
+              onClick={() => { setActiveFilter({ type: 'archive' }); setIsLibraryOpen(false); setIsSettingsOpen(false); }}
+              className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'archive' && !isLibraryOpen && !isSettingsOpen ? 'text-slate-800 dark:text-slate-200 scale-110' : 'text-[var(--text-muted)]'}`}
             >
               <Archive className="w-5 h-5" />
               <span className="text-[10px] font-black uppercase tracking-tight">{t.archive}</span>
+            </button>
+            <button 
+              onClick={() => { setIsLibraryOpen(true); setIsSettingsOpen(false); setSelectedArticle(null); }}
+              className={`flex flex-col items-center gap-1 transition-all ${isLibraryOpen ? 'text-blue-600 scale-110' : 'text-[var(--text-muted)]'}`}
+            >
+              <Folder className="w-5 h-5" />
+              <span className="text-[10px] font-black uppercase tracking-tight">{t.library}</span>
             </button>
             <button 
               onClick={openSettingsPage}
@@ -1860,8 +1868,8 @@ const App: React.FC = () => {
 
 
         {isSettingsOpen && (
-          <div className="fixed inset-0 z-[190] bg-[var(--bg-main)] text-[var(--text-main)] animate-in fade-in duration-200">
-            <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-6 md:px-6 md:py-10">
+          <div className="fixed inset-0 z-[190] bg-[var(--bg-main)] text-[var(--text-main)] animate-in fade-in duration-200 overflow-y-auto">
+            <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-6 md:px-6 md:py-10 pb-32">
               <div className="mb-8 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[var(--text-muted)]">{t.settings}</p>
@@ -1872,8 +1880,8 @@ const App: React.FC = () => {
                 </button>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-                <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-6 shadow-sm">
+              <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
+                <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 sm:p-6 shadow-sm">
                   <div className="mb-6 flex items-center gap-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--border-color)] text-lg font-bold">
                       {(user?.email?.[0] || 'U').toUpperCase()}
@@ -1923,7 +1931,7 @@ const App: React.FC = () => {
                       <button
                         onClick={() => handleSaveSettings('email')}
                         disabled={settingsLoading || !settingsForm.email.trim() || !settingsForm.currentPassword.trim()}
-                        className="flex-1 rounded-2xl bg-[var(--text-main)] px-4 py-3 font-bold text-[var(--bg-card)] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex-1 rounded-2xl bg-blue-600 px-4 py-3 font-bold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {t.saveEmail}
                       </button>
@@ -1938,9 +1946,9 @@ const App: React.FC = () => {
                   </div>
                 </section>
 
-                <section className="space-y-4 rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-6 shadow-sm">
+                <section className="space-y-4 rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 sm:p-6 shadow-sm">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{lang === 'tr' ? 'güvenli işlemler' : 'secure actions'}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{lang === 'tr' ? 'güvenli işlemler' : 'secure actions'}</p>
                     <h3 className="mt-2 text-lg font-semibold">{lang === 'tr' ? 'hesap işlemleri' : 'account actions'}</h3>
                   </div>
 
@@ -1975,6 +1983,78 @@ const App: React.FC = () => {
                       <p className="text-sm text-[var(--text-muted)]">{lang === 'tr' ? 'oturumu kapat' : 'sign out'}</p>
                     </div>
                     <LogOut className="w-4 h-4 text-[var(--text-muted)]" />
+                  </button>
+                </section>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isLibraryOpen && (
+          <div className="fixed inset-0 z-[190] bg-[var(--bg-main)] text-[var(--text-main)] animate-in slide-in-from-right duration-300">
+            <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-4 py-6">
+              <div className="mb-8 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[var(--text-muted)]">{t.library}</p>
+                  <h2 className="mt-2 text-2xl font-bold tracking-tight">{t.library}</h2>
+                </div>
+                <button onClick={() => setIsLibraryOpen(false)} className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-2.5 text-[var(--text-muted)]">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-8 pb-32 overflow-y-auto">
+                <section>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Folder className="w-4 h-4 text-blue-600" />
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{t.folders}</h3>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {folders.map(f => (
+                      <button 
+                        key={f} 
+                        onClick={() => { setActiveFilter({ type: 'folder', value: f }); setIsLibraryOpen(false); }}
+                        className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${activeFilter.type === 'folder' && activeFilter.value === f ? 'bg-blue-600/10 border-blue-600/30 text-blue-600' : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-main)]'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Folder className={`w-4 h-4 ${activeFilter.type === 'folder' && activeFilter.value === f ? 'text-blue-600' : 'text-[var(--text-muted)]'}`} />
+                          <span className="font-semibold">{f}</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 opacity-30" />
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Tag className="w-4 h-4 text-blue-600" />
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{t.tags}</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {allTags.map(t_str => (
+                      <button 
+                        key={t_str} 
+                        onClick={() => { setActiveFilter({ type: 'tag', value: t_str }); setIsLibraryOpen(false); }}
+                        className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${activeFilter.type === 'tag' && activeFilter.value === t_str ? 'bg-blue-600 border-blue-600 text-white' : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)]'}`}
+                      >
+                        #{t_str}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Highlighter className="w-4 h-4 text-yellow-500" />
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{t.highlights}</h3>
+                  </div>
+                  <button 
+                    onClick={() => { setActiveFilter({ type: 'highlights' }); setIsLibraryOpen(false); }}
+                    className={`w-full flex items-center gap-3 p-4 rounded-2xl border transition-all ${activeFilter.type === 'highlights' ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-600' : 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-main)]'}`}
+                  >
+                    <Highlighter className="w-4 h-4" />
+                    <span className="font-semibold">{t.myNotes}</span>
                   </button>
                 </section>
               </div>
