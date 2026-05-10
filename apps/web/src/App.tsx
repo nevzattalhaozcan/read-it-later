@@ -53,13 +53,16 @@ interface TooltipButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const TooltipButton: React.FC<TooltipButtonProps> = ({ tooltip, className = '', children, ...props }) => (
-  <span className="group relative inline-flex">
-    <button {...props} className={className}>
+  <span className="group relative inline-flex isolate">
+    <button {...props} className={className} aria-label={tooltip}>
       {children}
     </button>
-    <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-      {tooltip}
-    </span>
+    {tooltip && (
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-xl border border-slate-700/50 bg-slate-950 px-2.5 py-1.5 text-[11px] font-medium tracking-wide text-white shadow-xl opacity-0 scale-95 transition-all duration-150 ease-out group-hover:translate-y-0 group-hover:scale-100 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:scale-100 group-focus-within:opacity-100">
+        {tooltip}
+        <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-950" />
+      </span>
+    )}
   </span>
 );
 
