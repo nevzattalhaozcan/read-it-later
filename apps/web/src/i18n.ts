@@ -152,6 +152,11 @@ export const translations = {
     checkVerificationStatus: 'E-postamı doğruladım',
     addNewArticle: 'Yeni makale ekle',
     library: 'Kütüphane',
+    citation: 'Atıf',
+    copyCitation: 'Atıfı Kopyala',
+    bibliography: 'Kaynakça',
+    copyBibliography: 'Kaynakçayı Kopyala',
+    articlesSelected: 'makale seçildi',
   },
   en: {
     appName: 'sonra-okurum',
@@ -304,5 +309,10 @@ export const translations = {
     checkVerificationStatus: 'I have verified my email',
     addNewArticle: 'Add new article',
     library: 'Library',
+    citation: 'Citation',
+    copyCitation: 'Copy Citation',
+    bibliography: 'Bibliography',
+    copyBibliography: 'Copy Bibliography',
+    articlesSelected: 'articles selected',
   }
 };

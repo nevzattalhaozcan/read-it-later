@@ -38,6 +38,7 @@ interface Article {
   isPending?: boolean;
   highlights: Highlight[];
   matchReason?: string;
+  createdAt?: string;
 }
 
 type ToastType = 'success' | 'error' | 'info';
@@ -124,6 +125,7 @@ const App: React.FC = () => {
   const [newFolderInput, setNewFolderInput] = useState('');
   const [settingsForm, setSettingsForm] = useState({ email: '', currentPassword: '', newPassword: '' });
   const [settingsLoading, setSettingsLoading] = useState(false);
+  const [selectedArticleIds, setSelectedArticleIds] = useState<Set<string>>(new Set());
 
   // Highlight & Notes State
   const [highlightToolbar, setHighlightToolbar] = useState<{x: number, y: number, text: string, prefix: string, suffix: string, startOffset: number} | null>(null);
@@ -1129,9 +1131,48 @@ const App: React.FC = () => {
       case 'tag': return a.tags.includes(activeFilter.value || '');
       case 'archive': return a.isArchived;
       case 'highlights': return (a.highlights?.length || 0) > 0;
-      default: return !a.isArchived && a.folder === 'Inbox';
     }
   });
+
+  const toggleArticleSelection = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedArticleIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const formatCitation = (article: Article) => {
+    const author = article.siteName || new URL(article.url).hostname;
+    const date = new Date(article.createdAt || Date.now());
+    const year = date.getFullYear();
+    const month = date.toLocaleString(lang, { month: 'long' });
+    const day = date.getDate();
+    
+    // Simple APA-ish format: Author. (Year, Month Day). Title. Site Name. URL
+    // Since we don't always have real person author names, we use siteName/domain
+    return `${author}. (${year}, ${month} ${day}). ${article.title}. ${article.url}`;
+  };
+
+  const handleCopyCitations = () => {
+    const selectedArticles = articles.filter(a => selectedArticleIds.has(a._id));
+    if (selectedArticles.length === 0) return;
+
+    let text = '';
+    if (selectedArticles.length === 1) {
+      text = formatCitation(selectedArticles[0]);
+    } else {
+      text = selectedArticles
+        .map(a => formatCitation(a))
+        .sort()
+        .join('\n\n');
+    }
+
+    void copyTextToClipboard(text, selectedArticles.length === 1 ? t.copyCitation : t.copyBibliography);
+    setSelectedArticleIds(new Set());
+  };
 
   // Pre-compute grouped highlights for My Notes view
   const articlesWithHighlights = articles
@@ -2004,7 +2045,15 @@ const App: React.FC = () => {
                   </div>
                 ) : (
                   filteredArticles.map((article) => (
-                    <div key={article._id} onClick={() => setSelectedArticle(article)} className="group bg-[var(--bg-card)] p-5 sm:p-7 rounded-[2rem] shadow-sm border border-[var(--border-color)] hover:border-blue-600/30 hover:shadow-xl transition-all cursor-pointer relative theme-transition flex flex-col sm:flex-row gap-6 overflow-visible w-full">
+                    <div key={article._id} onClick={() => { if (selectedArticleIds.size > 0) toggleArticleSelection(article._id); else setSelectedArticle(article); }} className={`group bg-[var(--bg-card)] p-5 sm:p-7 rounded-[2rem] shadow-sm border ${selectedArticleIds.has(article._id) ? 'border-blue-600 ring-2 ring-blue-600/10' : 'border-[var(--border-color)]'} hover:border-blue-600/30 hover:shadow-xl transition-all cursor-pointer relative theme-transition flex flex-col sm:flex-row gap-6 overflow-visible w-full`}>
+                      {/* Selection Checkbox */}
+                      <div 
+                        onClick={(e) => toggleArticleSelection(article._id, e)}
+                        className={`absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all z-10 ${selectedArticleIds.has(article._id) ? 'bg-blue-600 border-blue-600 scale-110 shadow-lg' : 'bg-[var(--bg-card)] border-[var(--border-color)] opacity-0 group-hover:opacity-100'}`}
+                      >
+                        {selectedArticleIds.has(article._id) && <Check className="w-3.5 h-3.5 text-white stroke-[3px]" />}
+                      </div>
+
                       {/* Card Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4 mb-3">
@@ -2100,6 +2149,34 @@ const App: React.FC = () => {
               <span className="text-[10px] font-black uppercase tracking-tight">{t.myNotes}</span>
             </button>
           </nav>
+
+          {/* Citation Action Bar */}
+          {selectedArticleIds.size > 0 && (
+            <div className="fixed bottom-24 lg:bottom-8 left-1/2 -translate-x-1/2 z-[400] animate-in slide-in-from-bottom-8 duration-300">
+              <div className="bg-slate-900 text-white rounded-2xl shadow-2xl px-6 py-4 flex items-center gap-6 border border-slate-800 backdrop-blur-xl bg-opacity-95">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 leading-none mb-1">{selectedArticleIds.size} {t.articlesSelected}</span>
+                  <span className="text-sm font-bold text-white">{selectedArticleIds.size === 1 ? t.citation : t.bibliography}</span>
+                </div>
+                <div className="w-px h-8 bg-slate-800" />
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handleCopyCitations}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-blue-600/20"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {selectedArticleIds.size === 1 ? t.copyCitation : t.copyBibliography}
+                  </button>
+                  <button 
+                    onClick={() => setSelectedArticleIds(new Set())}
+                    className="p-2.5 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
 
 
