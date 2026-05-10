@@ -110,3 +110,36 @@ setConfirmModal({
   <Trash2 size={16} />
 </TooltipButton>
 ```
+
+---
+
+## Mobile Design & Glassmorphism
+
+The app uses a mobile-first design system with premium visual effects:
+
+**1. Glassmorphism Utility**
+Use the `.glass` class for any sticky or fixed navigation elements:
+```css
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+```
+
+**2. Dynamic Viewport Units**
+Always use `min-h-100dvh` for full-screen layouts to ensure compatibility with mobile browser address bars.
+
+**3. Safe Area Padding**
+Use the `.safe-pb` utility for mobile navigation bars to prevent overlap with the OS home indicator:
+```css
+.safe-pb {
+  padding-bottom: calc(var(--safe-area-bottom) + 80px);
+}
+```
+
+**4. Design Tokens**
+- `--glass-bg`: Theme-aware background for glass elements.
+- `--glass-border`: Subtle border for depth in glass elements.
+- `--safe-area-bottom`: `env(safe-area-inset-bottom)` fallback.

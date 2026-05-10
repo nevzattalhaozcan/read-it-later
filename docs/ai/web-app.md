@@ -6,7 +6,14 @@
 
 ## Architecture Warning
 
-`apps/web/src/App.tsx` is a **~2100-line monolithic React component**. There is intentionally no router — all view switching is done with `if/else` conditions. Do not extract into separate route files without a deliberate refactor plan.
+`apps/web/src/App.tsx` is a **~2100-line monolithic React component**. There is intentionally no router — all view switching is done with `if/else` conditions.
+
+**Mobile Layout Patterns:**
+- **Sidebar:** Hidden on screens < `lg` (1024px).
+- **Bottom Navigation:** Fixed to bottom on screens < `lg` for core filters.
+- **Header:** Simplified on mobile with a togglable search bar and "Add URL" popover.
+- **Reader View:** Navigation bar adapts to smaller screens (compact font size controls).
+- **Glassmorphism:** All sticky/fixed UI elements use `.glass` utility for premium aesthetics.
 
 ---
 
@@ -23,7 +30,7 @@ else if (isSettingsOpen)
 else if (selectedArticle)
   → <ArticleReaderView>
 else
-  → <ArticleListView>    (sidebar + article grid)
+  → <ArticleListView>    (sidebar [lg only] + responsive header + article grid + bottom nav [mobile only])
 ```
 
 > **Critical:** Any confirm modal, toast, or overlay that must be visible regardless of view must be rendered in **both** the list view and reader view branches.
