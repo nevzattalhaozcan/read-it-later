@@ -1011,6 +1011,20 @@ const App: React.FC = () => {
             <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-16 w-auto object-contain rounded-xl shadow-md border border-[var(--border-color)]" />
             <div className="flex items-center gap-1.5">
               <button 
+                onClick={toggleLang}
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm text-xs font-bold"
+                title={lang === 'tr' ? 'Türkçe' : 'English'}
+              >
+                {lang === 'tr' ? 'TR' : 'EN'}
+              </button>
+              <button 
+                onClick={toggleTheme}
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
+                title={theme === 'light' ? t.themeLight : theme === 'dark' ? t.themeDark : 'System'}
+              >
+                {theme === 'light' ? <Sun className="w-4 h-4" /> : theme === 'dark' ? <Moon className="w-4 h-4" /> : <Settings className="w-4 h-4" />}
+              </button>
+              <button 
                 onClick={() => setIsSettingsOpen(true)}
                 className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
                 title={t.settings}
@@ -1101,12 +1115,6 @@ const App: React.FC = () => {
                   </form>
                 </div>
 
-                <button 
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--bg-card)] border border-transparent hover:border-[var(--border-color)] transition-all"
-                >
-                  <Settings className="w-5 h-5" />
-                </button>
               </div>
             </header>
 
