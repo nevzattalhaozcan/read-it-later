@@ -105,6 +105,7 @@ const App: React.FC = () => {
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [newUrl, setNewUrl] = useState('');
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   
   // Filtering & Navigation
@@ -586,14 +587,25 @@ const App: React.FC = () => {
     setTimeout(() => setToasts(prev => prev.filter(t_obj => t_obj.id !== id)), 4000);
   };
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAdd = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!newUrl) return;
+
+    // URL Validation
+    const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
+    if (!urlRegex.test(newUrl)) {
+      setUrlError(lang === 'tr' ? 'Lütfen geçerli bir URL girin' : 'Please enter a valid URL');
+      setTimeout(() => setUrlError(null), 3000);
+      return;
+    }
+
     if (articles.some(a => a.url === newUrl)) {
       showToast(t.alreadyExists, 'info');
       return;
     }
+
     setIsAdding(true);
+    setUrlError(null);
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -1733,7 +1745,7 @@ const App: React.FC = () => {
             )}
 
             <div className="flex-1 flex items-center justify-end gap-2 lg:hidden min-w-0">
-              <div ref={searchContainerRef} className={`relative flex items-center transition-all duration-300 ${isSearchActive ? 'flex-1' : ''}`}>
+              <div ref={searchContainerRef} className={`relative flex items-center transition-all duration-300 ${isSearchActive ? 'flex-1' : ''}`} onClick={e => e.stopPropagation()}>
                 <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isSearchActive ? 'w-full opacity-100' : 'w-0 opacity-0'}`}>
                   <div className="relative w-full">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
@@ -1744,6 +1756,7 @@ const App: React.FC = () => {
                       placeholder={t.searchPlaceholder}
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
+                      onClick={e => e.stopPropagation()}
                     />
                   </div>
                 </div>
@@ -1757,20 +1770,26 @@ const App: React.FC = () => {
                 )}
               </div>
 
-              <div ref={addUrlContainerRef} className={`relative flex items-center transition-all duration-300 ${isAddUrlActive ? 'flex-1' : ''}`}>
+              <div ref={addUrlContainerRef} className={`relative flex items-center transition-all duration-300 ${isAddUrlActive ? 'flex-1' : ''}`} onClick={e => e.stopPropagation()}>
                 <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isAddUrlActive ? 'w-full opacity-100' : 'w-0 opacity-0'}`}>
                   <div className="relative w-full">
                     <Plus className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-600" />
                     <input 
                       ref={addUrlInputRef}
                       type="url" 
-                      className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2.5 pl-11 pr-24 text-sm outline-none focus:border-blue-600/30 transition-all shadow-sm"
+                      className={`w-full bg-[var(--bg-card)] border ${urlError ? 'border-red-500' : 'border-[var(--border-color)]'} rounded-2xl py-2.5 pl-11 pr-24 text-sm outline-none focus:border-blue-600/30 transition-all shadow-sm`}
                       placeholder={t.urlPlaceholder}
                       value={newUrl}
-                      onChange={e => setNewUrl(e.target.value)}
+                      onChange={e => { setNewUrl(e.target.value); setUrlError(null); }}
+                      onClick={e => e.stopPropagation()}
                     />
+                    {urlError && (
+                      <div className="absolute left-0 -bottom-8 w-full text-[10px] font-bold text-red-500 bg-red-500/10 py-1 px-3 rounded-lg animate-in fade-in slide-in-from-top-1">
+                        {urlError}
+                      </div>
+                    )}
                     <button 
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAdd(e); setIsAddUrlActive(false); }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAdd(e); }}
                       disabled={isAdding || !newUrl}
                       className="absolute right-1.5 top-1/2 -translate-y-1/2 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all shadow-md active:scale-95"
                     >
@@ -1839,20 +1858,26 @@ const App: React.FC = () => {
                     )}
                   </div>
                   
-                  <div ref={addUrlContainerRef} className="relative flex items-center">
+                  <div ref={addUrlContainerRef} className="relative flex items-center" onClick={e => e.stopPropagation()}>
                     <div className={`flex items-center transition-all duration-300 ease-out overflow-hidden ${isAddUrlActive ? 'w-80 opacity-100' : 'w-0 opacity-0'}`}>
                       <div className="relative w-full mr-2">
                         <Plus className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-600" />
                         <input 
                           ref={addUrlInputRef}
                           type="url" 
-                          className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2.5 pl-11 pr-24 text-sm outline-none focus:border-blue-600/30 focus:shadow-[0_0_20px_rgba(37,99,235,0.1)] transition-all shadow-sm"
+                          className={`w-full bg-[var(--bg-card)] border ${urlError ? 'border-red-500' : 'border-[var(--border-color)]'} rounded-2xl py-2.5 pl-11 pr-24 text-sm outline-none focus:border-blue-600/30 transition-all shadow-sm`}
                           placeholder={t.urlPlaceholder}
                           value={newUrl}
-                          onChange={e => setNewUrl(e.target.value)}
+                          onChange={e => { setNewUrl(e.target.value); setUrlError(null); }}
+                          onClick={e => e.stopPropagation()}
                         />
+                        {urlError && (
+                          <div className="absolute left-0 -bottom-8 w-full text-[10px] font-bold text-red-500 bg-red-500/10 py-1 px-3 rounded-lg animate-in fade-in slide-in-from-top-1">
+                            {urlError}
+                          </div>
+                        )}
                         <button 
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAdd(e); setIsAddUrlActive(false); }}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAdd(e); }}
                           disabled={isAdding || !newUrl}
                           className="absolute right-1.5 top-1/2 -translate-y-1/2 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-[10px] font-black uppercase rounded-xl transition-all shadow-md shadow-blue-600/20 active:scale-95"
                         >
