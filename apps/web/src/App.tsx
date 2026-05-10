@@ -26,6 +26,7 @@ interface Article {
   isArchived: boolean;
   isRead: boolean;
   highlights: Highlight[];
+  matchReason?: string;
 }
 
 type ToastType = 'success' | 'error' | 'info';
@@ -96,6 +97,21 @@ const App: React.FC = () => {
   const [widthIdx, setWidthIdx] = useState(1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const addUrlInputRef = useRef<HTMLInputElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const addUrlContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchActive(false);
+      }
+      if (addUrlContainerRef.current && !addUrlContainerRef.current.contains(event.target as Node)) {
+        setIsAddUrlActive(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const prefsLoaded = useRef(false);
   const lastSyncedPrefs = useRef<{ lang: Lang; theme: Theme }>({ lang: 'tr', theme: 'light' });
 
@@ -584,9 +600,33 @@ const App: React.FC = () => {
   
   const allTags = Array.from(new Set(articles.flatMap(a => a.tags))).filter(Boolean);
 
-  const filteredArticles = articles.filter(a => {
-    const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase()) || a.url.toLowerCase().includes(searchQuery.toLowerCase());
-    if (!matchesSearch) return false;
+  const filteredArticles = articles.map(a => {
+    let matchReason = undefined;
+    let matchesSearch = false;
+    const query = searchQuery.toLowerCase();
+    
+    if (!query) {
+      matchesSearch = true;
+    } else if (a.title.toLowerCase().includes(query)) {
+      matchesSearch = true;
+      matchReason = t.matchTitle || 'başlık';
+    } else if (a.url.toLowerCase().includes(query)) {
+      matchesSearch = true;
+      matchReason = t.matchUrl || 'bağlantı';
+    } else if (a.tags.some(tag => tag.toLowerCase().includes(query))) {
+      matchesSearch = true;
+      matchReason = t.matchTag || 'etiket';
+    } else if (a.content.toLowerCase().includes(query)) {
+      matchesSearch = true;
+      matchReason = t.matchContent || 'içerik';
+    } else if (a.highlights?.some(h => h.text.toLowerCase().includes(query) || h.note?.toLowerCase().includes(query))) {
+      matchesSearch = true;
+      matchReason = t.matchNote || 'not';
+    }
+
+    return { ...a, matchesSearch, matchReason };
+  }).filter(a => {
+    if (!a.matchesSearch) return false;
     if (activeFilter.type !== 'archive' && a.isArchived) return false;
     switch (activeFilter.type) {
       case 'favorite': return a.isFavorite;
@@ -1072,7 +1112,7 @@ const App: React.FC = () => {
               
               <div className="flex items-center gap-3">
                 {/* Search Action */}
-                <div className={`relative flex items-center transition-all duration-300 ease-out ${isSearchActive ? 'w-64' : 'w-10'}`}>
+                <div ref={searchContainerRef} className={`relative flex items-center transition-all duration-300 ease-out ${isSearchActive ? 'w-64' : 'w-10'}`}>
                   <button 
                     onClick={() => { setIsSearchActive(!isSearchActive); setIsAddUrlActive(false); setTimeout(() => searchInputRef.current?.focus(), 100); }}
                     className={`absolute left-0 z-10 w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isSearchActive ? 'text-blue-600' : 'text-[var(--text-muted)] hover:bg-[var(--bg-card)] border border-transparent hover:border-[var(--border-color)]'}`}
@@ -1090,7 +1130,7 @@ const App: React.FC = () => {
                 </div>
 
                 {/* Add URL Action */}
-                <div className={`relative flex items-center transition-all duration-300 ease-out ${isAddUrlActive ? 'w-80' : 'w-10'}`}>
+                <div ref={addUrlContainerRef} className={`relative flex items-center transition-all duration-300 ease-out ${isAddUrlActive ? 'w-80' : 'w-10'}`}>
                   <button 
                     onClick={() => { setIsAddUrlActive(!isAddUrlActive); setIsSearchActive(false); setTimeout(() => addUrlInputRef.current?.focus(), 100); }}
                     className={`absolute left-0 z-10 w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isAddUrlActive ? 'text-blue-600' : 'text-[var(--text-muted)] hover:bg-[var(--bg-card)] border border-transparent hover:border-[var(--border-color)]'}`}
@@ -1153,7 +1193,14 @@ const App: React.FC = () => {
                             {article.tags.map(t_str => <span key={t_str} className="px-2 py-0.5 bg-blue-600/10 text-blue-600 text-[10px] font-bold rounded-md">#{t_str}</span>)}
                             {article.folder && <span className="px-2 py-0.5 bg-[var(--border-color)] text-[var(--text-muted)] text-[10px] font-bold rounded-md flex items-center gap-1"><Folder className="w-2.5 h-2.5" /> {article.folder === 'Inbox' ? t.inbox : article.folder}</span>}
                           </div>
-                          <div className="flex items-center gap-4 text-xs font-semibold text-[var(--text-muted)]"><span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {article.readingTimeMinutes} {t.minRead}</span></div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 text-xs font-semibold text-[var(--text-muted)]"><span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {article.readingTimeMinutes} {t.minRead}</span></div>
+                            {searchQuery && article.matchReason && (
+                              <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-blue-600 uppercase bg-blue-600/10 px-2 py-1 rounded w-fit">
+                                <Search className="w-3 h-3" /> {article.matchReason}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -83,6 +83,11 @@ export const translations = {
     privacy: 'gizlilik politikası',
     invalidCredentials: 'geçersiz bilgiler',
     errorOccurred: 'bir hata oluştu',
+    matchTitle: 'başlık',
+    matchUrl: 'bağlantı',
+    matchContent: 'içerik',
+    matchNote: 'not',
+    matchTag: 'etiket',
   },
   en: {
     appName: 'sonra-okurum',
@@ -166,5 +171,10 @@ export const translations = {
     privacy: 'privacy policy',
     invalidCredentials: 'invalid credentials',
     errorOccurred: 'an error occurred',
+    matchTitle: 'title',
+    matchUrl: 'url',
+    matchContent: 'content',
+    matchNote: 'note',
+    matchTag: 'tag',
   }
 };
