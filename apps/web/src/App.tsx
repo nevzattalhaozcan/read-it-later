@@ -5,7 +5,7 @@ import {
   Inbox, Star, Search, MoreVertical,
   Archive, Check, MoreHorizontal, Edit3, Save, XCircle,
   Move, Sun, Moon, Coffee, Highlighter, MessageSquarePlus,
-  StickyNote, ChevronDown, Settings, LogOut, Key, Copy, Link2, Languages
+  StickyNote, ChevronDown, Settings, LogOut, Copy, Link2, Languages
 } from 'lucide-react';
 import { translations, Lang } from './i18n';
 import { policies } from './policies';
@@ -102,6 +102,8 @@ const App: React.FC = () => {
   const [folderModalArticle, setFolderModalArticle] = useState<Article | null>(null);
   const [newTagInput, setNewTagInput] = useState('');
   const [newFolderInput, setNewFolderInput] = useState('');
+  const [settingsForm, setSettingsForm] = useState({ email: '', currentPassword: '', newPassword: '' });
+  const [settingsLoading, setSettingsLoading] = useState(false);
 
   // Highlight & Notes State
   const [highlightToolbar, setHighlightToolbar] = useState<{x: number, y: number, text: string, prefix: string, suffix: string, startOffset: number} | null>(null);
@@ -209,6 +211,11 @@ const App: React.FC = () => {
       setTargetHighlightId(highlightId);
     }
   }, [articles, selectedArticle]);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    setSettingsForm(prev => prev.email ? prev : { ...prev, email: user.email });
+  }, [user?.email]);
 
   // Save lang+theme to DB when the user changes them.
   useEffect(() => {
@@ -345,6 +352,92 @@ const App: React.FC = () => {
     setUser(null);
     setArticles([]);
     setSelectedArticle(null);
+  };
+
+  const openSettingsPage = () => {
+    setIsSettingsOpen(true);
+    setSelectedArticle(null);
+    setContextMenu(null);
+    setTranslationPopover(null);
+    setHighlightToolbar(null);
+    setActiveHighlightPopover(null);
+  };
+
+  const closeSettingsPage = () => setIsSettingsOpen(false);
+
+  const handleSaveSettings = async (mode: 'email' | 'password') => {
+    setSettingsLoading(true);
+    try {
+      const payload: Record<string, string> = { currentPassword: settingsForm.currentPassword };
+      if (mode === 'email') payload.email = settingsForm.email;
+      if (mode === 'password') payload.newPassword = settingsForm.newPassword;
+
+      const res = await fetch(`${AUTH_URL}/me`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || t.errorOccurred);
+      }
+
+      setUser(data);
+      setSettingsForm(prev => ({ ...prev, currentPassword: '', newPassword: '' }));
+      if (mode === 'email') {
+        showToast(t.emailUpdated || t.updatedSuccessfully);
+      } else {
+        showToast(t.passwordUpdated || t.updatedSuccessfully);
+      }
+    } catch (error: any) {
+      showToast(error?.message || t.errorOccurred, 'error');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleResetData = () => {
+    setConfirmModal({
+      message: t.resetDataConfirm,
+      confirmLabel: t.resetData,
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/data`, {
+            method: 'DELETE',
+            headers: getHeaders()
+          });
+          if (!res.ok) throw new Error(t.errorOccurred);
+          setArticles([]);
+          setSelectedArticle(null);
+          setIsSettingsOpen(false);
+          showToast(t.resetDataDone);
+          setConfirmModal(null);
+        } catch (error: any) {
+          showToast(error?.message || t.errorOccurred, 'error');
+        }
+      }
+    });
+  };
+
+  const handleDeleteAccount = () => {
+    setConfirmModal({
+      message: t.deleteAccountConfirm,
+      confirmLabel: t.deleteAccount,
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${AUTH_URL}/me`, {
+            method: 'DELETE',
+            headers: getHeaders()
+          });
+          if (!res.ok) throw new Error(t.errorOccurred);
+          setConfirmModal(null);
+          handleLogout();
+        } catch (error: any) {
+          showToast(error?.message || t.errorOccurred, 'error');
+        }
+      }
+    });
   };
 
   const showToast = (message: string, type: ToastType = 'success') => {
@@ -1361,7 +1454,7 @@ const App: React.FC = () => {
                 {theme === 'light' ? <Sun className="w-4 h-4" /> : theme === 'dark' ? <Moon className="w-4 h-4" /> : <Coffee className="w-4 h-4" />}
               </button>
               <button 
-                onClick={() => setIsSettingsOpen(true)}
+                onClick={openSettingsPage}
                 className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
                 title={t.settings}
               >
@@ -1513,6 +1606,129 @@ const App: React.FC = () => {
           </div>
         </main>
 
+        {isSettingsOpen && (
+          <div className="fixed inset-0 z-[190] bg-[var(--bg-main)] text-[var(--text-main)] animate-in fade-in duration-200">
+            <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-6 md:px-6 md:py-10">
+              <div className="mb-8 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[var(--text-muted)]">{t.settings}</p>
+                  <h2 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">{t.settings}</h2>
+                </div>
+                <button onClick={closeSettingsPage} className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-2.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-main)]">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
+                <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-6 shadow-sm">
+                  <div className="mb-6 flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--border-color)] text-lg font-bold">
+                      {(user?.email?.[0] || 'U').toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-semibold">{user?.email}</p>
+                      <p className="text-sm text-[var(--text-muted)]">{lang === 'tr' ? 'hesap ayarları' : 'account settings'}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.email}</label>
+                      <input
+                        type="email"
+                        value={settingsForm.email}
+                        onChange={(e) => setSettingsForm(prev => ({ ...prev, email: e.target.value }))}
+                        className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
+                        placeholder={t.email}
+                      />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.currentPassword}</label>
+                        <input
+                          type="password"
+                          value={settingsForm.currentPassword}
+                          onChange={(e) => setSettingsForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                          className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
+                          placeholder={t.currentPassword}
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.newPassword}</label>
+                        <input
+                          type="password"
+                          value={settingsForm.newPassword}
+                          onChange={(e) => setSettingsForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                          className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
+                          placeholder={t.newPassword}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                      <button
+                        onClick={() => handleSaveSettings('email')}
+                        disabled={settingsLoading || !settingsForm.email.trim() || !settingsForm.currentPassword.trim()}
+                        className="flex-1 rounded-2xl bg-[var(--text-main)] px-4 py-3 font-bold text-[var(--bg-card)] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {t.saveEmail}
+                      </button>
+                      <button
+                        onClick={() => handleSaveSettings('password')}
+                        disabled={settingsLoading || !settingsForm.currentPassword.trim() || !settingsForm.newPassword.trim()}
+                        className="flex-1 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 font-bold transition-colors hover:bg-[var(--border-color)] disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {t.savePassword}
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="space-y-4 rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-6 shadow-sm">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{lang === 'tr' ? 'güvenli işlemler' : 'secure actions'}</p>
+                    <h3 className="mt-2 text-lg font-semibold">{lang === 'tr' ? 'hesap işlemleri' : 'account actions'}</h3>
+                  </div>
+
+                  <button
+                    onClick={handleResetData}
+                    className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-4 text-left transition-colors hover:bg-[var(--border-color)]"
+                  >
+                    <div>
+                      <p className="font-semibold">{t.resetData}</p>
+                      <p className="text-sm text-[var(--text-muted)]">{t.resetDataDescription}</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />
+                  </button>
+
+                  <button
+                    onClick={handleDeleteAccount}
+                    className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-4 text-left text-red-600 transition-colors hover:bg-red-500/10"
+                  >
+                    <div>
+                      <p className="font-semibold">{t.deleteAccount}</p>
+                      <p className="text-sm text-red-500/80">{t.deleteAccountDescription}</p>
+                    </div>
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => { handleLogout(); closeSettingsPage(); }}
+                    className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-4 text-left transition-colors hover:bg-[var(--border-color)]"
+                  >
+                    <div>
+                      <p className="font-semibold">{t.logout}</p>
+                      <p className="text-sm text-[var(--text-muted)]">{lang === 'tr' ? 'oturumu kapat' : 'sign out'}</p>
+                    </div>
+                    <LogOut className="w-4 h-4 text-[var(--text-muted)]" />
+                  </button>
+                </section>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modals with themes support */}
         {editArticle && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -1611,58 +1827,6 @@ const App: React.FC = () => {
           ))}
         </div>
 
-        <div className={`fixed inset-0 z-[200] ${isSettingsOpen ? 'visible' : 'invisible'}`} onClick={() => setIsSettingsOpen(false)}>
-          <div className={`fixed inset-y-0 right-0 w-full max-w-sm bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-300 ${isSettingsOpen ? 'translate-x-0' : 'translate-x-full'}`} onClick={e => e.stopPropagation()}>
-            <div className="p-6 h-full flex flex-col">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-bold dark:text-white">{t.settings}</h2>
-                <button onClick={() => setIsSettingsOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
-                  <X className="w-5 h-5 dark:text-white" />
-                </button>
-              </div>
-
-              <div className="flex-1 space-y-6">
-                <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
-                  <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
-                    {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-bold dark:text-white truncate">{user?.name || 'User'}</p>
-                    <p className="text-sm text-slate-500 truncate">{user?.email}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <button className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors dark:text-white">
-                    <Key className="w-5 h-5 text-slate-400" />
-                    <span className="font-medium">{t.changePassword}</span>
-                  </button>
-                  <button onClick={() => { toggleTheme(); }} className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors dark:text-white">
-                    {theme === 'light' ? <Moon className="w-5 h-5 text-slate-400" /> : <Sun className="w-5 h-5 text-slate-400" />}
-                    <span className="font-medium">{theme === 'light' ? t.themeDark : t.themeLight}</span>
-                  </button>
-                  <button onClick={() => { toggleLang(); }} className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors dark:text-white text-xs font-bold uppercase tracking-widest">
-                    <span className="w-5 text-slate-400 text-center">{lang === 'tr' ? 'EN' : 'TR'}</span>
-                    <span className="font-medium">{lang === 'tr' ? 'English' : 'Türkçe'}</span>
-                  </button>
-                </div>
-
-                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                  <button onClick={() => { setActivePolicy('terms'); setIsSettingsOpen(false); }} className="w-full text-left p-4 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">{t.terms}</button>
-                  <button onClick={() => { setActivePolicy('privacy'); setIsSettingsOpen(false); }} className="w-full text-left p-4 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">{t.privacy}</button>
-                </div>
-              </div>
-
-              <button 
-                onClick={() => { handleLogout(); setIsSettingsOpen(false); }}
-                className="w-full flex items-center justify-center gap-2 p-4 mt-4 bg-red-50 dark:bg-red-500/10 text-red-600 font-bold rounded-2xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
-              >
-                <LogOut className="w-5 h-5" />
-                {t.logout}
-              </button>
-            </div>
-          </div>
-        </div>
         {confirmModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmModal(null)} />

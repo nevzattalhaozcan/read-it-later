@@ -114,6 +114,66 @@ api.get('/auth/me', async (c) => {
   return c.json(user);
 });
 
+api.patch('/auth/me', async (c) => {
+  await connectDB();
+  const userId = c.get('userId');
+  const { email, currentPassword, newPassword } = await c.req.json();
+
+  const user = await User.findById(userId);
+  if (!user) return c.json({ error: 'User not found' }, 404);
+
+  const wantsEmailChange = typeof email === 'string' && email.trim() && email.trim().toLowerCase() !== user.email;
+  const wantsPasswordChange = typeof newPassword === 'string' && newPassword.trim().length >= 6;
+
+  if (!wantsEmailChange && !wantsPasswordChange) {
+    return c.json({ error: 'No changes provided' }, 400);
+  }
+
+  if (typeof currentPassword !== 'string' || !currentPassword.trim()) {
+    return c.json({ error: 'Current password is required' }, 400);
+  }
+
+  const isMatch = await user.comparePassword(currentPassword);
+  if (!isMatch) return c.json({ error: 'Invalid credentials' }, 401);
+
+  if (wantsEmailChange) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail, _id: { $ne: userId } });
+    if (existingUser) return c.json({ error: 'Email already exists' }, 400);
+    user.email = normalizedEmail;
+  }
+
+  if (wantsPasswordChange) {
+    user.password = newPassword.trim();
+  }
+
+  await user.save();
+
+  const updatedUser = await User.findById(userId).select('-password');
+  return c.json(updatedUser);
+});
+
+api.delete('/data', async (c) => {
+  await connectDB();
+  const userId = c.get('userId');
+  await Article.deleteMany({ owner: userId });
+  await UserPreferences.deleteOne({ userId });
+  broadcast({ type: 'REFETCH_ARTICLES' });
+  broadcast({ type: 'REFETCH_PREFERENCES' });
+  return c.json({ success: true });
+});
+
+api.delete('/auth/me', async (c) => {
+  await connectDB();
+  const userId = c.get('userId');
+  await Article.deleteMany({ owner: userId });
+  await UserPreferences.deleteOne({ userId });
+  await User.findByIdAndDelete(userId);
+  broadcast({ type: 'REFETCH_ARTICLES' });
+  broadcast({ type: 'REFETCH_PREFERENCES' });
+  return c.json({ success: true });
+});
+
 api.get('/articles', async (c) => {
   await connectDB();
   const userId = c.get('userId');
