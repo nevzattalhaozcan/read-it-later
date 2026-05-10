@@ -1341,12 +1341,17 @@ const App: React.FC = () => {
 
             {/* Orta: Tema ve Font Boyutu (Sabit) */}
             <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-              <div className="flex items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
+              <div className="hidden sm:flex items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
                 <TooltipButton onClick={() => setFontSizeIdx(i => Math.max(0, i - 1))} disabled={fontSizeIdx === 0} tooltip={t.decreaseFontSize} placement="bottom" className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[12px] disabled:opacity-30">A−</TooltipButton>
                 <div className="w-px h-4 bg-[var(--border-color)] mx-0.5" />
                 <TooltipButton onClick={() => setFontSizeIdx(i => Math.min(4, i + 1))} disabled={fontSizeIdx === 4} tooltip={t.increaseFontSize} placement="bottom" className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[14px] disabled:opacity-30">A+</TooltipButton>
               </div>
-              <div className="flex items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
+              
+              <div className="flex sm:hidden items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
+                <button onClick={() => setFontSizeIdx(i => i === 4 ? 0 : i + 1)} className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] font-bold text-sm">A</button>
+              </div>
+
+              <div className="hidden md:flex items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
                 {([
                   [4,10, 4,10, 4, 8],
                   [2,12, 2,12, 2, 9],
@@ -1367,6 +1372,7 @@ const App: React.FC = () => {
                   </TooltipButton>
                 ))}
               </div>
+              
               <TooltipButton 
                 onClick={toggleTheme}
                 className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
@@ -1687,122 +1693,173 @@ const App: React.FC = () => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 min-w-0" onClick={() => setActiveMenuId(null)}>
-          <div className="max-w-3xl mx-auto px-4 py-8 md:py-16">
-            <header className="mb-14 flex items-center justify-between gap-6">
-              <div className="min-w-0">
-                <h1 className="text-2xl font-bold mb-1 truncate">
-                  {activeFilter.type === 'all' ? t.inbox : activeFilter.type === 'favorite' ? t.favorites : activeFilter.type === 'archive' ? t.archive : activeFilter.type === 'highlights' ? t.myNotes : activeFilter.value}
-                </h1>
-                <p className="text-[10px] font-bold text-[var(--text-muted)] tracking-widest">{numToWords(filteredArticles.length, lang)} {t.articles}</p>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                {/* Search Action */}
-                <div ref={searchContainerRef} className={`relative flex items-center transition-all duration-300 ease-out ${isSearchActive ? 'w-64' : 'w-10'}`}>
-                  <button 
-                    onClick={() => { setIsSearchActive(!isSearchActive); setIsAddUrlActive(false); setTimeout(() => searchInputRef.current?.focus(), 100); }}
-                    className={`absolute left-0 z-10 w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isSearchActive ? 'text-blue-600' : 'text-[var(--text-muted)] hover:bg-[var(--bg-card)] border border-transparent hover:border-[var(--border-color)]'}`}
-                  >
-                    <Search className="w-5 h-5" />
-                  </button>
-                  <input 
-                    ref={searchInputRef}
-                    type="text" 
-                    placeholder={t.searchPlaceholder} 
-                    value={searchQuery} 
-                    onChange={(e) => setSearchQuery(e.target.value)} 
-                    className={`w-full pl-11 pr-4 py-2.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl focus:ring-2 focus:ring-blue-600 transition-all text-sm text-[var(--text-main)] ${isSearchActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                  />
-                </div>
+        <main className="flex-1 flex flex-col min-w-0 bg-[var(--bg-main)] safe-pb" onClick={() => setActiveMenuId(null)}>
+          {/* Header */}
+          <header className="sticky top-0 z-40 glass border-b border-[var(--border-color)] px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 lg:hidden">
+              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="logo" className="h-8 w-auto" />
+            </div>
 
-                {/* Add URL Action */}
-                <div ref={addUrlContainerRef} className={`relative flex items-center transition-all duration-300 ease-out ${isAddUrlActive ? 'w-80' : 'w-10'}`}>
-                  <button 
-                    onClick={() => { setIsAddUrlActive(!isAddUrlActive); setIsSearchActive(false); setTimeout(() => addUrlInputRef.current?.focus(), 100); }}
-                    className={`absolute left-0 z-10 w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isAddUrlActive ? 'text-blue-600' : 'text-[var(--text-muted)] hover:bg-[var(--bg-card)] border border-transparent hover:border-[var(--border-color)]'}`}
-                  >
-                    {isAdding ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-                  </button>
-                  <form onSubmit={(e) => { e.preventDefault(); handleAdd(e); setIsAddUrlActive(false); }} className="w-full">
-                    <input 
-                      ref={addUrlInputRef}
-                      type="url" 
-                      value={newUrl} 
-                      onChange={(e) => setNewUrl(e.target.value)} 
-                      placeholder={t.urlPlaceholder} 
-                      className={`w-full pl-11 pr-16 py-2.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl focus:ring-2 focus:ring-blue-600 transition-all text-sm text-[var(--text-main)] ${isAddUrlActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                      disabled={isAdding}
-                    />
-                    {isAddUrlActive && (
-                      <button type="submit" disabled={!newUrl || isAdding || isDuplicate} className="absolute right-2 top-2 bottom-2 px-3 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
-                        {t.save}
+            <div className="flex-1 max-w-2xl relative flex items-center gap-2">
+              <div className={`flex-1 relative flex items-center transition-all duration-300 ${isSearchActive ? 'opacity-100' : 'opacity-0 lg:opacity-100 pointer-events-none lg:pointer-events-auto'}`}>
+                <Search className="absolute left-4 w-4 h-4 text-[var(--text-muted)]" />
+                <input 
+                  ref={searchInputRef}
+                  type="text" 
+                  className="w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl py-2 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all shadow-sm"
+                  placeholder={t.searchPlaceholder}
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              {!isSearchActive && (
+                <button 
+                  onClick={() => setIsSearchActive(true)}
+                  className="lg:hidden w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)]"
+                >
+                  <Search className="w-5 h-5" />
+                </button>
+              )}
+
+              <div className="relative group flex items-center gap-2">
+                <button 
+                  onClick={() => { setIsAddUrlActive(o => !o); setIsSearchActive(false); setTimeout(() => addUrlInputRef.current?.focus(), 100); }}
+                  className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all shadow-md active:scale-95 ${isAddUrlActive ? 'bg-slate-800 text-white' : 'bg-blue-600 text-white shadow-blue-600/20'}`}
+                >
+                  {isAddUrlActive ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                </button>
+                
+                {isAddUrlActive && (
+                  <div className="absolute top-full right-0 mt-3 w-[calc(100vw-32px)] sm:w-96 glass rounded-3xl p-5 shadow-2xl border border-[var(--border-color)] animate-in fade-in slide-in-from-top-4 duration-300">
+                    <h4 className="text-sm font-bold mb-4 px-1">{t.addNewArticle || 'Add link'}</h4>
+                    <form onSubmit={(e) => { e.preventDefault(); handleAdd(e); setIsAddUrlActive(false); }} className="space-y-3">
+                      <input 
+                        ref={addUrlInputRef}
+                        type="url" 
+                        autoFocus
+                        className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl py-3 px-4 text-sm outline-none focus:ring-2 focus:ring-blue-600 transition-all"
+                        placeholder={t.urlPlaceholder}
+                        value={newUrl}
+                        onChange={e => setNewUrl(e.target.value)}
+                      />
+                      <button 
+                        type="submit"
+                        disabled={isAdding || !newUrl}
+                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98]"
+                      >
+                        {isAdding ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t.save}
                       </button>
-                    )}
-                  </form>
-                </div>
-
+                    </form>
+                  </div>
+                )}
               </div>
-            </header>
+            </div>
 
-            <div className="space-y-4">
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="w-8 h-8 text-blue-600 animate-spin" /><p className="text-[var(--text-muted)] font-medium">{t.loading}</p></div>
-              ) : activeFilter.type === 'highlights' ? (
-                highlightsContent
-              ) : (
-                <>
-                  {filteredArticles.map((article) => (
-                    <div key={article._id} onClick={() => setSelectedArticle(article)} className="group bg-[var(--bg-card)] p-6 rounded-2xl shadow-sm border border-[var(--border-color)] hover:border-blue-200 hover:shadow-md transition-all cursor-pointer relative theme-transition">
-                      <div className="flex gap-5">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-bold tracking-widest text-[var(--text-muted)]">{article.siteName || new URL(article.url).hostname}</span>
-                            <div className="relative">
-                              <button onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === article._id ? null : article._id); }} className="p-1 hover:bg-[var(--bg-main)] rounded-lg text-[var(--text-muted)] transition-colors">
-                                <MoreHorizontal className="w-5 h-5" />
-                              </button>
-                              {activeMenuId === article._id && (
-                                <div className="absolute right-0 mt-2 w-52 bg-[var(--bg-card)] rounded-xl shadow-xl border border-[var(--border-color)] z-50 py-2 animate-in zoom-in-95 duration-100 origin-top-right text-[var(--text-main)]" onClick={(e) => e.stopPropagation()}>
-                                  <button onClick={() => setEditArticle(article)} className="w-full text-left px-4 py-2 hover:bg-[var(--bg-main)] flex items-center gap-2 text-sm font-medium"><Edit3 className="w-4 h-4 text-[var(--text-muted)]" /> {t.editArticle}</button>
-                                  <button onClick={() => setTagModalArticle(article)} className="w-full text-left px-4 py-2 hover:bg-[var(--bg-main)] flex items-center gap-2 text-sm font-medium"><Tag className="w-4 h-4 text-[var(--text-muted)]" /> {t.manageTags}</button>
-                                  <button onClick={() => setFolderModalArticle(article)} className="w-full text-left px-4 py-2 hover:bg-[var(--bg-main)] flex items-center gap-2 text-sm font-medium"><Move className="w-4 h-4 text-[var(--text-muted)]" /> {t.moveToFolder}</button>
-                                  <button onClick={() => updateArticle(article._id, { isFavorite: !article.isFavorite })} className="w-full text-left px-4 py-2 hover:bg-[var(--bg-main)] flex items-center gap-2 text-sm font-medium"><Star className={`w-4 h-4 ${article.isFavorite ? 'text-amber-500 fill-current' : 'text-[var(--text-muted)]'}`} /> {article.isFavorite ? t.removeFavorite : t.favorite}</button>
-                                  <button onClick={() => updateArticle(article._id, { isArchived: !article.isArchived })} className="w-full text-left px-4 py-2 hover:bg-[var(--bg-main)] flex items-center gap-2 text-sm font-medium"><Archive className="w-4 h-4 text-[var(--text-muted)]" /> {article.isArchived ? t.unarchive : t.archiveArticle}</button>
-                                  <div className="h-px bg-[var(--border-color)] my-2" /><button onClick={() => handleDelete(article._id)} className="w-full text-left px-4 py-2 hover:bg-[var(--bg-main)] flex items-center gap-2 text-sm font-medium text-red-600"><Trash2 className="w-4 h-4" /> {t.delete}</button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <h2 className="text-xl font-bold mb-2 group-hover:text-blue-600 transition-colors leading-snug line-clamp-2 article-title">{article.title}</h2>
-                          <p className="text-[var(--text-muted)] text-sm line-clamp-2 leading-relaxed mb-4 article-description">{article.description}</p>
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {article.tags.map(t_str => <span key={t_str} className="px-2 py-0.5 bg-blue-600/10 text-blue-600 text-[10px] font-bold rounded-md">#{t_str}</span>)}
-                            {article.folder && <span className="px-2 py-0.5 bg-[var(--border-color)] text-[var(--text-muted)] text-[10px] font-bold rounded-md flex items-center gap-1"><Folder className="w-2.5 h-2.5" /> {article.folder === 'Inbox' ? t.inbox : article.folder}</span>}
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4 text-xs font-semibold text-[var(--text-muted)]"><span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {article.readingTimeMinutes} {t.minRead}</span></div>
-                            {searchQuery && article.matchReason && (
-                              <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-blue-600 uppercase bg-blue-600/10 px-2 py-1 rounded w-fit">
-                                <Search className="w-3 h-3" /> {article.matchReason}
+            <div className="hidden sm:flex items-center gap-3">
+              <button onClick={openSettingsPage} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
+          </header>
+
+          <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h1 className="text-2xl font-black tracking-tight text-[var(--text-main)] mb-1">
+                    {activeFilter.type === 'all' ? t.inbox : 
+                     activeFilter.type === 'favorite' ? t.favorites :
+                     activeFilter.type === 'archive' ? t.archive :
+                     activeFilter.type === 'highlights' ? t.myNotes :
+                     activeFilter.value}
+                  </h1>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
+                    {numToWords(filteredArticles.length, lang)} {t.articles}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                {loading ? (
+                  <div className="col-span-full flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="w-8 h-8 text-blue-600 animate-spin" /><p className="text-[var(--text-muted)] font-medium">{t.loading}</p></div>
+                ) : activeFilter.type === 'highlights' ? (
+                  <div className="col-span-full">{highlightsContent}</div>
+                ) : (
+                  filteredArticles.map((article) => (
+                    <div key={article._id} onClick={() => setSelectedArticle(article)} className="group bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl shadow-sm border border-[var(--border-color)] hover:border-blue-600/30 hover:shadow-xl transition-all cursor-pointer relative theme-transition flex flex-col h-full overflow-hidden">
+                      {/* Card Content ... */}
+                      <div className="flex-1 min-w-0 mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-600/5 px-2 py-0.5 rounded-full">{article.siteName || 'link'}</span>
+                          <div className="relative">
+                            <button onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === article._id ? null : article._id); }} className="p-1 hover:bg-[var(--bg-main)] rounded-lg text-[var(--text-muted)] transition-colors">
+                              <MoreHorizontal className="w-5 h-5" />
+                            </button>
+                            {activeMenuId === article._id && (
+                              <div className="absolute right-0 mt-2 w-52 glass rounded-2xl shadow-2xl z-50 py-2 animate-in zoom-in-95 duration-100 origin-top-right" onClick={(e) => e.stopPropagation()}>
+                                <button onClick={() => setEditArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Edit3 className="w-4 h-4 text-[var(--text-muted)]" /> {t.editArticle}</button>
+                                <button onClick={() => setTagModalArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Tag className="w-4 h-4 text-[var(--text-muted)]" /> {t.manageTags}</button>
+                                <button onClick={() => setFolderModalArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Move className="w-4 h-4 text-[var(--text-muted)]" /> {t.moveToFolder}</button>
+                                <button onClick={() => updateArticle(article._id, { isFavorite: !article.isFavorite })} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Star className={`w-4 h-4 ${article.isFavorite ? 'text-amber-500 fill-current' : 'text-[var(--text-muted)]'}`} /> {article.isFavorite ? t.removeFavorite : t.favorite}</button>
+                                <button onClick={() => updateArticle(article._id, { isArchived: !article.isArchived })} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Archive className="w-4 h-4 text-[var(--text-muted)]" /> {article.isArchived ? t.unarchive : t.archiveArticle}</button>
+                                <div className="h-px bg-[var(--border-color)] my-2" /><button onClick={() => handleDelete(article._id)} className="w-full text-left px-4 py-2 hover:bg-red-500/5 flex items-center gap-2 text-sm font-medium text-red-600"><Trash2 className="w-4 h-4" /> {t.delete}</button>
                               </div>
                             )}
                           </div>
                         </div>
+                        <h2 className="text-lg font-bold mb-2 group-hover:text-blue-600 transition-colors leading-tight line-clamp-2">{article.title}</h2>
+                        <p className="text-[var(--text-muted)] text-xs line-clamp-2 leading-relaxed opacity-70">{article.description}</p>
+                      </div>
+                      <div className="mt-auto pt-4 flex items-center justify-between border-t border-[var(--border-color)]">
+                        <div className="flex items-center gap-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-wider">
+                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {article.readingTimeMinutes} {t.minRead}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {article.isFavorite && <Star className="w-3.5 h-3.5 text-amber-500 fill-current" />}
+                          {article.isArchived && <Archive className="w-3.5 h-3.5 text-slate-400" />}
+                        </div>
                       </div>
                     </div>
-                  ))}
-                  {filteredArticles.length === 0 && (
-                    <div className="text-center py-24 bg-[var(--bg-card)] rounded-3xl border-2 border-dashed border-[var(--border-color)]">
-                      <Bookmark className="w-12 h-12 text-[var(--border-color)] mx-auto mb-4" />
-                      <p className="text-[var(--text-muted)] font-medium">{t.nothingHere}</p>
-                    </div>
-                  )}
-                </>
-              )}
+                  ))
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Bottom Nav (Mobile Only) */}
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-[var(--border-color)] px-6 py-3 pb-[calc(12px+var(--safe-area-bottom))] flex items-center justify-between z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+            <button 
+              onClick={() => { setActiveFilter({ type: 'all' }); setIsSettingsOpen(false); }}
+              className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'all' && !isSettingsOpen ? 'text-blue-600 scale-110' : 'text-[var(--text-muted)]'}`}
+            >
+              <Inbox className="w-5 h-5" />
+              <span className="text-[10px] font-black uppercase tracking-tight">{t.inbox}</span>
+            </button>
+            <button 
+              onClick={() => { setActiveFilter({ type: 'favorite' }); setIsSettingsOpen(false); }}
+              className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'favorite' ? 'text-amber-500 scale-110' : 'text-[var(--text-muted)]'}`}
+            >
+              <Star className={`w-5 h-5 ${activeFilter.type === 'favorite' ? 'fill-current' : ''}`} />
+              <span className="text-[10px] font-black uppercase tracking-tight">{t.favorites}</span>
+            </button>
+            <button 
+              onClick={() => { setActiveFilter({ type: 'archive' }); setIsSettingsOpen(false); }}
+              className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'archive' ? 'text-slate-800 dark:text-slate-200 scale-110' : 'text-[var(--text-muted)]'}`}
+            >
+              <Archive className="w-5 h-5" />
+              <span className="text-[10px] font-black uppercase tracking-tight">{t.archive}</span>
+            </button>
+            <button 
+              onClick={openSettingsPage}
+              className={`flex flex-col items-center gap-1 transition-all ${isSettingsOpen ? 'text-blue-600 scale-110' : 'text-[var(--text-muted)]'}`}
+            >
+              <Settings className="w-5 h-5" />
+              <span className="text-[10px] font-black uppercase tracking-tight">{t.settings}</span>
+            </button>
+          </nav>
         </main>
+
 
         {isSettingsOpen && (
           <div className="fixed inset-0 z-[190] bg-[var(--bg-main)] text-[var(--text-main)] animate-in fade-in duration-200">

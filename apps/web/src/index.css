@@ -13,6 +13,9 @@
   --highlight-color: rgba(250, 204, 21, 0.4);
   --highlight-hover: rgba(250, 204, 21, 0.6);
   --note-indicator-color: #eab308;
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 [data-theme='dark'] {
@@ -26,6 +29,8 @@
   --highlight-color: rgba(59, 130, 246, 0.25);
   --highlight-hover: rgba(59, 130, 246, 0.45);
   --note-indicator-color: #3b82f6;
+  --glass-bg: rgba(15, 23, 42, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.05);
 }
 
 [data-theme='sepia'] {
@@ -49,6 +54,18 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100dvh;
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.safe-pb {
+  padding-bottom: calc(var(--safe-area-bottom) + 80px);
 }
 
 /* Exemptions for article content and user notes to preserve readability */
