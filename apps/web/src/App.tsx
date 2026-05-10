@@ -50,17 +50,18 @@ const UIContext = createContext<UIContextType | null>(null);
 
 interface TooltipButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   tooltip: string;
+  placement?: 'top' | 'bottom';
 }
 
-const TooltipButton: React.FC<TooltipButtonProps> = ({ tooltip, className = '', children, ...props }) => (
+const TooltipButton: React.FC<TooltipButtonProps> = ({ tooltip, placement = 'bottom', className = '', children, ...props }) => (
   <span className="group relative inline-flex isolate">
     <button {...props} className={className} aria-label={tooltip}>
       {children}
     </button>
     {tooltip && (
-      <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-xl border border-slate-700/50 bg-slate-950 px-2.5 py-1.5 text-[11px] font-medium tracking-wide text-white shadow-xl opacity-0 scale-95 transition-all duration-150 ease-out group-hover:translate-y-0 group-hover:scale-100 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:scale-100 group-focus-within:opacity-100">
+      <span className={`pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-xl border border-slate-700/50 bg-slate-950 px-2.5 py-1.5 text-[11px] font-medium tracking-wide text-white shadow-xl opacity-0 scale-95 transition-all duration-150 ease-out group-hover:scale-100 group-hover:opacity-100 group-focus-within:scale-100 group-focus-within:opacity-100 ${placement === 'top' ? 'bottom-full mb-2 translate-y-1 group-hover:translate-y-0 group-focus-within:translate-y-0' : 'top-full mt-2 -translate-y-1 group-hover:translate-y-0 group-focus-within:translate-y-0'}`}>
         {tooltip}
-        <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-950" />
+        <span className={`absolute left-1/2 -translate-x-1/2 border-4 border-transparent ${placement === 'top' ? 'top-full border-t-slate-950' : 'bottom-full border-b-slate-950'}`} />
       </span>
     )}
   </span>
@@ -1031,10 +1032,11 @@ const App: React.FC = () => {
         <nav className="sticky top-0 bg-[var(--bg-card)]/80 backdrop-blur-md border-b border-[var(--border-color)] z-10">
           <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between relative">
             {/* Sol: Logo (geri dön) */}
-            <TooltipButton
+              <TooltipButton
               onClick={() => { setSelectedArticle(null); setHighlightToolbar(null); setActiveHighlightPopover(null); setIsArticleMenuOpen(false); }}
               tooltip={t.back}
               className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors hover:opacity-80"
+                placement="bottom"
             >
               <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-10 w-auto object-contain sm:h-12" />
             </TooltipButton>
@@ -1042,9 +1044,9 @@ const App: React.FC = () => {
             {/* Orta: Tema ve Font Boyutu (Sabit) */}
             <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
               <div className="flex items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
-                <TooltipButton onClick={() => setFontSizeIdx(i => Math.max(0, i - 1))} disabled={fontSizeIdx === 0} tooltip={t.decreaseFontSize} className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[12px] disabled:opacity-30">A−</TooltipButton>
+                <TooltipButton onClick={() => setFontSizeIdx(i => Math.max(0, i - 1))} disabled={fontSizeIdx === 0} tooltip={t.decreaseFontSize} placement="bottom" className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[12px] disabled:opacity-30">A−</TooltipButton>
                 <div className="w-px h-4 bg-[var(--border-color)] mx-0.5" />
-                <TooltipButton onClick={() => setFontSizeIdx(i => Math.min(4, i + 1))} disabled={fontSizeIdx === 4} tooltip={t.increaseFontSize} className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[14px] disabled:opacity-30">A+</TooltipButton>
+                <TooltipButton onClick={() => setFontSizeIdx(i => Math.min(4, i + 1))} disabled={fontSizeIdx === 4} tooltip={t.increaseFontSize} placement="bottom" className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[14px] disabled:opacity-30">A+</TooltipButton>
               </div>
               <div className="flex items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
                 {([
@@ -1057,6 +1059,7 @@ const App: React.FC = () => {
                     onClick={() => setWidthIdx(wi)}
                     className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${widthIdx === wi ? 'bg-[var(--bg-card)] text-[var(--text-main)]' : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)]'}`}
                     tooltip={wi === 0 ? t.narrowColumn : wi === 1 ? t.mediumColumn : t.wideColumn}
+                    placement="bottom"
                   >
                     <svg width="14" height="11" viewBox="0 0 14 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                       <line x1={x1a} y1="1"   x2={x2a} y2="1"/>
@@ -1070,6 +1073,7 @@ const App: React.FC = () => {
                 onClick={toggleTheme}
                 className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
                 tooltip={theme === 'light' ? t.themeLight : theme === 'dark' ? t.themeDark : 'System'}
+                placement="bottom"
               >
                 {theme === 'light' ? <Sun className="w-4 h-4" /> : theme === 'dark' ? <Moon className="w-4 h-4" /> : <Coffee className="w-4 h-4" />}
               </TooltipButton>
@@ -1077,18 +1081,18 @@ const App: React.FC = () => {
 
             {/* Sağ: açılır menü + üç nokta */}
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-              <div className={`flex items-center gap-0.5 overflow-hidden transition-all duration-200 ${isArticleMenuOpen ? 'max-w-[240px] mr-1.5 opacity-100' : 'max-w-0 opacity-0 pointer-events-none'}`}>
+              <div className={`flex items-center gap-0.5 overflow-visible transition-all duration-200 ${isArticleMenuOpen ? 'max-w-[240px] mr-1.5 opacity-100' : 'max-w-0 opacity-0 pointer-events-none'}`}>
                 {/* Aksiyonlar */}
-                <TooltipButton onClick={() => updateArticle(selectedArticle._id, { isFavorite: !selectedArticle.isFavorite })} className={`w-7 h-7 flex items-center justify-center hover:bg-[var(--bg-main)] rounded-lg transition-colors ${selectedArticle.isFavorite ? 'text-amber-500' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`} tooltip={selectedArticle.isFavorite ? t.removeFavorite : t.favorite}>
+                <TooltipButton onClick={() => updateArticle(selectedArticle._id, { isFavorite: !selectedArticle.isFavorite })} className={`w-7 h-7 flex items-center justify-center hover:bg-[var(--bg-main)] rounded-lg transition-colors ${selectedArticle.isFavorite ? 'text-amber-500' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`} tooltip={selectedArticle.isFavorite ? t.menuFavoriteOn : t.menuFavorite} placement="bottom">
                   <Star className={`w-4 h-4 ${selectedArticle.isFavorite ? 'fill-current' : ''}`} />
                 </TooltipButton>
-                <TooltipButton type="button" onClick={() => window.open(selectedArticle.url, '_blank', 'noopener,noreferrer')} tooltip={t.original} className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 hover:bg-[var(--bg-main)] rounded-lg transition-colors">
+                <TooltipButton type="button" onClick={() => window.open(selectedArticle.url, '_blank', 'noopener,noreferrer')} tooltip={t.menuSource} className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-blue-600 hover:bg-[var(--bg-main)] rounded-lg transition-colors" placement="bottom">
                   <ExternalLink className="w-4 h-4" />
                 </TooltipButton>
-                <TooltipButton onClick={() => { updateArticle(selectedArticle._id, { isArchived: !selectedArticle.isArchived }); setIsArticleMenuOpen(false); }} className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-main)] rounded-lg transition-colors" tooltip={selectedArticle.isArchived ? t.unarchive : t.archiveArticle}>
+                <TooltipButton onClick={() => { updateArticle(selectedArticle._id, { isArchived: !selectedArticle.isArchived }); setIsArticleMenuOpen(false); }} className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-main)] rounded-lg transition-colors" tooltip={t.menuArchive} placement="bottom">
                   <Archive className="w-4 h-4" />
                 </TooltipButton>
-                <TooltipButton onClick={() => { handleDelete(selectedArticle._id); setIsArticleMenuOpen(false); }} className="w-7 h-7 flex items-center justify-center text-red-500 hover:bg-red-500/10 rounded-lg transition-colors" tooltip={t.delete}>
+                <TooltipButton onClick={() => { handleDelete(selectedArticle._id); setIsArticleMenuOpen(false); }} className="w-7 h-7 flex items-center justify-center text-red-500 hover:bg-red-500/10 rounded-lg transition-colors" tooltip={t.menuDelete} placement="bottom">
                   <Trash2 className="w-4 h-4" />
                 </TooltipButton>
               </div>
@@ -1096,6 +1100,7 @@ const App: React.FC = () => {
                 onClick={() => setIsArticleMenuOpen(o => !o)}
                 className={`w-9 h-9 flex items-center justify-center rounded-xl border transition-all ${isArticleMenuOpen ? 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-main)]' : 'border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:border-[var(--border-color)]'}`}
                 tooltip={isArticleMenuOpen ? t.cancel : t.articleActions}
+                placement="bottom"
               >
                 <MoreVertical className="w-5 h-5" />
               </TooltipButton>
