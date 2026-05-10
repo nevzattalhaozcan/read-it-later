@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
-import { connectDB } from './lib/db';
-import { Article } from './models/Article';
-import { UserPreferences } from './models/UserPreferences';
-import { scrapeUrl } from './utils/scraper';
+import { connectDB } from './lib/db.js';
+import { Article } from './models/Article.js';
+import { UserPreferences } from './models/UserPreferences.js';
+import { scrapeUrl } from './utils/scraper.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
