@@ -143,6 +143,7 @@ export const translations = {
     emailAlreadyInUse: 'Bu e-posta adresi zaten kullanımda.',
     checkEmailInstructions: 'E-postanıza bir doğrulama linki gönderdik. Lütfen linke tıkladıktan sonra devam etmek için aşağıdaki butona basın.',
     checkVerificationStatus: 'E-postamı doğruladım',
+    addNewArticle: 'Yeni makale ekle',
   },
   en: {
     appName: 'sonra-okurum',
@@ -286,5 +287,6 @@ export const translations = {
     emailAlreadyInUse: 'This email address is already in use.',
     checkEmailInstructions: 'We sent a verification link to your email. Please click the link in your email and then click the button below to continue.',
     checkVerificationStatus: 'I have verified my email',
+    addNewArticle: 'Add new article',
   }
 };

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, createContext, useRef, useCallback } from 'react';
 import {
-  Loader2, ExternalLink, Clock, Plus, Bookmark, Trash2,
+  Loader2, ExternalLink, Clock, Plus, Trash2,
   ChevronRight, X, CheckCircle2, AlertCircle, Info, Tag, Folder,
   Inbox, Star, Search, MoreVertical,
   Archive, Check, MoreHorizontal, Edit3, Save, XCircle,
@@ -1047,8 +1047,6 @@ const App: React.FC = () => {
       default: return !a.isArchived && a.folder === 'Inbox';
     }
   });
-
-  const isDuplicate = articles.some(a => a.url === newUrl);
 
   // Pre-compute grouped highlights for My Notes view
   const articlesWithHighlights = articles

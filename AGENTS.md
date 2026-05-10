@@ -131,6 +131,8 @@ authenticated + isSettingsOpen → <SettingsView>
 
 10. **Extension has no build step** — `popup.js` is plain JS, directly referenced in `popup.html`.
 
+11. **Verify build before pushing.** Always run `npm run build:web` locally after UI changes to ensure no i18n keys are missing and no unused variables/imports are left behind. Production builds use strict linting.
+
 ---
 
 ## Commit Convention

@@ -66,6 +66,17 @@ Before writing code, identify which files you will touch:
 
 ---
 
+---
+
+## Verification (MANDATORY)
+
+- [ ] `npm run build:web` passes (if touching apps/web)
+- [ ] No missing i18n keys
+- [ ] No unused variables or imports
+- [ ] Mobile layout tested (if touching UI)
+
+---
+
 ## Docs to Update After Implementation
 
 - [ ] `docs/ai/api.md` (if new route)

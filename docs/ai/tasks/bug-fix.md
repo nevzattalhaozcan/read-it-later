@@ -66,6 +66,8 @@
   - [ ] WebSocket broadcasts still working?
 - [ ] If schema changed: Mongoose strict mode respected?
 - [ ] If new user-visible text: i18n keys added?
+- [ ] **MANDATORY:** `npm run build:web` passes (if touching apps/web)
+- [ ] **MANDATORY:** No unused variables or imports left behind
 
 ---
 
