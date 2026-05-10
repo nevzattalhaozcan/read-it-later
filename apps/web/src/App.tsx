@@ -831,22 +831,32 @@ const App: React.FC = () => {
         }
       }}>
         <nav className="sticky top-0 bg-[var(--bg-card)]/80 backdrop-blur-md border-b border-[var(--border-color)] z-10">
-          <div className={`${['max-w-xl','max-w-2xl','max-w-3xl'][widthIdx]} mx-auto px-4 h-14 flex items-center justify-between relative`}>
-            {/* Sol: geri */}
-            <button onClick={() => { setSelectedArticle(null); setHighlightToolbar(null); setActiveHighlightPopover(null); setIsArticleMenuOpen(false); }} className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-main)] font-medium transition-colors">
-              <ArrowLeft className="w-4 h-4" /> {t.back}
+          <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between relative">
+            {/* Sol: Logo (Geri Butonu Görevi Görür) */}
+            <button onClick={() => { setSelectedArticle(null); setHighlightToolbar(null); setActiveHighlightPopover(null); setIsArticleMenuOpen(false); }} className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors hover:opacity-80">
+              <ArrowLeft className="w-5 h-5" />
+              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-7 w-auto object-contain hidden sm:block" />
             </button>
 
-            {/* Orta: logo */}
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="logo" className="absolute left-1/2 -translate-x-1/2 h-8 w-auto" />
+            {/* Orta: Tema ve Font Boyutu (Sabit) */}
+            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+              <div className="flex items-center bg-[var(--bg-main)] rounded-xl border border-[var(--border-color)] p-0.5">
+                <button onClick={() => setFontSizeIdx(i => Math.max(0, i - 1))} disabled={fontSizeIdx === 0} className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[12px] disabled:opacity-30">A−</button>
+                <div className="w-px h-4 bg-[var(--border-color)] mx-0.5" />
+                <button onClick={() => setFontSizeIdx(i => Math.min(4, i + 1))} disabled={fontSizeIdx === 4} className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors font-bold text-[14px] disabled:opacity-30">A+</button>
+              </div>
+              <button 
+                onClick={toggleTheme}
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
+                title={theme === 'light' ? t.themeLight : theme === 'dark' ? t.themeDark : 'System'}
+              >
+                {theme === 'light' ? <Sun className="w-4 h-4" /> : theme === 'dark' ? <Moon className="w-4 h-4" /> : <Coffee className="w-4 h-4" />}
+              </button>
+            </div>
 
             {/* Sağ: açılır menü + üç nokta */}
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               <div className={`flex items-center gap-0.5 overflow-hidden transition-all duration-200 ${isArticleMenuOpen ? 'max-w-[400px] mr-1.5 opacity-100' : 'max-w-0 opacity-0 pointer-events-none'}`}>
-                {/* Font boyutu: 5 adımlı (14,15,16,18,20px) */}
-                <button onClick={() => setFontSizeIdx(i => Math.max(0, i - 1))} disabled={fontSizeIdx === 0} className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-main)] rounded-lg transition-colors font-bold text-[11px] disabled:opacity-30">A−</button>
-                <button onClick={() => setFontSizeIdx(i => Math.min(4, i + 1))} disabled={fontSizeIdx === 4} className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-main)] rounded-lg transition-colors font-bold text-[13px] disabled:opacity-30">A+</button>
-                <div className="w-px h-4 bg-[var(--border-color)] mx-1 shrink-0" />
                 {/* Genişlik: dar / orta / geniş */}
                 {([
                   [4,10, 4,10, 4, 8],
