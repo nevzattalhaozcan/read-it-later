@@ -2085,9 +2085,9 @@ const App: React.FC = () => {
                       {/* Selection Checkbox */}
                       <div 
                         onClick={(e) => toggleArticleSelection(article._id, e)}
-                        className={`absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all z-10 ${selectedArticleIds.has(article._id) ? 'bg-blue-600 border-blue-600 scale-110 shadow-lg' : 'bg-[var(--bg-card)] border-[var(--border-color)] opacity-0 group-hover:opacity-100'}`}
+                        className={`absolute -left-3 lg:-left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all z-10 ${selectedArticleIds.has(article._id) ? 'bg-blue-600 border-blue-600 scale-110 shadow-lg' : 'bg-[var(--bg-card)] border-[var(--border-color)] opacity-100 lg:opacity-0 lg:group-hover:opacity-100'} ${selectedArticleIds.size > 0 ? 'opacity-100' : ''}`}
                       >
-                        {selectedArticleIds.has(article._id) && <Check className="w-3.5 h-3.5 text-white stroke-[3px]" />}
+                        {selectedArticleIds.has(article._id) && <Check className="w-4 h-4 text-white stroke-[3px]" />}
                       </div>
 
                       {/* Card Content */}
@@ -2120,7 +2120,6 @@ const App: React.FC = () => {
                                 <button onClick={() => setFolderModalArticle(article)} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Move className="w-4 h-4 text-[var(--text-muted)]" /> {t.moveToFolder}</button>
                                 <button onClick={() => updateArticle(article._id, { isFavorite: !article.isFavorite })} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Star className={`w-4 h-4 ${article.isFavorite ? 'text-amber-500 fill-current' : 'text-[var(--text-muted)]'}`} /> {article.isFavorite ? t.removeFavorite : t.favorite}</button>
                                 <button onClick={() => updateArticle(article._id, { isArchived: !article.isArchived })} className="w-full text-left px-4 py-2 hover:bg-blue-600/5 flex items-center gap-2 text-sm font-medium"><Archive className="w-4 h-4 text-[var(--text-muted)]" /> {article.isArchived ? t.unarchive : t.archiveArticle}</button>
-                                <div className="h-px bg-[var(--border-color)] my-2" /><button onClick={() => handleDelete(article._id)} className="w-full text-left px-4 py-2 hover:bg-red-500/5 flex items-center gap-2 text-sm font-medium text-red-600"><Trash2 className="w-4 h-4" /> {t.delete}</button>
                               </div>
                             )}
                           </div>

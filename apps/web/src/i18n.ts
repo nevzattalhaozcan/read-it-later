@@ -157,6 +157,7 @@ export const translations = {
     bibliography: 'Kaynakça',
     copyBibliography: 'Kaynakçayı Kopyala',
     articlesSelected: 'makale seçildi',
+    select: 'Seç',
   },
   en: {
     appName: 'sonra-okurum',
@@ -314,5 +315,6 @@ export const translations = {
     bibliography: 'Bibliography',
     copyBibliography: 'Copy Bibliography',
     articlesSelected: 'articles selected',
+    select: 'Select',
   }
 };
