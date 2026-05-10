@@ -747,16 +747,33 @@ const App: React.FC = () => {
     const elementTarget = target instanceof Element ? target : null;
     const highlightElement = elementTarget?.closest('mark[data-highlight-id]');
 
+    // Boundary checks for context menu
+    const menuWidth = 260;
+    const menuHeight = 180;
+    let x = e.clientX;
+    let y = e.clientY;
+
+    if (x + menuWidth > window.innerWidth) {
+      x = window.innerWidth - menuWidth - 12;
+    }
+    if (y + menuHeight > window.innerHeight) {
+      y = window.innerHeight - menuHeight - 12;
+    }
+
+    // Ensure x and y are not negative
+    x = Math.max(12, x);
+    y = Math.max(12, y);
+
     setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
+      x,
+      y,
       text: context.text,
       highlightId: highlightElement?.getAttribute('data-highlight-id') || highlightIdFromContext
     });
     setTranslationPopover(null);
     setHighlightToolbar(null);
     setActiveHighlightPopover(null);
-  }, []);
+  }, [selectedArticle, lang, t]);
 
   const closeContextMenu = () => setContextMenu(null);
 
@@ -1450,7 +1467,7 @@ const App: React.FC = () => {
         {contextMenu && (
           <div
             className="fixed z-[180] min-w-64 animate-in fade-in zoom-in-95 duration-150"
-            style={{ top: contextMenu.y + 8, left: contextMenu.x + 8 }}
+            style={{ top: contextMenu.y, left: contextMenu.x }}
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >
