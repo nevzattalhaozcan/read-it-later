@@ -45,17 +45,28 @@ export async function scrapeUrl(url: string, providedHtml?: string): Promise<Scr
       });
       html = await response.text();
 
-      // Cloudflare / Bot Protection Check
+      // Cloudflare / Bot Protection / SPA Shell Check
       const isCloudflareBlocked = 
         html.includes('Just a moment...') ||
         html.includes('Enable JavaScript and cookies to continue') ||
         (response.status === 403 && html.includes('<title>Access denied</title>')) ||
         html.includes('cf-browser-verification');
 
-      if (isCloudflareBlocked) {
-        console.log(`[Scraper] Anti-bot detected for ${url}. Using Jina AI fallback...`);
+      const isSPAShell = 
+        (html.includes('id="root"') || html.includes('id="app"')) && 
+        !html.includes('<article') && 
+        !html.includes('<main') &&
+        html.length < 5000; // Shells are usually small
+
+      const needsJs = 
+        html.includes('You need to enable JavaScript') || 
+        html.includes('JavaScript is required') ||
+        html.includes('Please enable JS');
+
+      if (isCloudflareBlocked || isSPAShell || needsJs) {
+        console.log(`[Scraper] Anti-bot or SPA shell detected for ${url}. Using Jina AI fallback...`);
         const jinaController = new AbortController();
-        const jinaTimeout = setTimeout(() => jinaController.abort(), 10000); // 10s timeout
+        const jinaTimeout = setTimeout(() => jinaController.abort(), 15000); // 15s timeout for Jina
         try {
           const jinaResponse = await fetch(`https://r.jina.ai/${url}`, {
             signal: jinaController.signal,
@@ -96,9 +107,35 @@ export async function scrapeUrl(url: string, providedHtml?: string): Promise<Scr
   }
 
   // 2. Content extraction with Readability
-  const dom = new JSDOM(html, { url });
-  const reader = new Readability(dom.window.document);
-  const article = reader.parse();
+  let dom = new JSDOM(html, { url });
+  let reader = new Readability(dom.window.document);
+  let article = reader.parse();
+
+  // 3. Second-pass fallback if content is still missing/poor and we haven't used Jina yet
+  if ((!article?.content || article.textContent.length < 200) && !html.includes('jina-ai')) {
+    console.log(`[Scraper] Content too short or missing for ${url}. Trying Jina AI second-pass...`);
+    const jinaController = new AbortController();
+    const jinaTimeout = setTimeout(() => jinaController.abort(), 15000);
+    try {
+      const jinaResponse = await fetch(`https://r.jina.ai/${url}`, {
+        signal: jinaController.signal,
+        headers: { 'X-Return-Format': 'html' }
+      });
+      if (jinaResponse.ok) {
+        const jinaHtml = await jinaResponse.text();
+        if (jinaHtml.length > html.length) { // Only use if it seems better
+          html = jinaHtml;
+          dom = new JSDOM(html, { url });
+          reader = new Readability(dom.window.document);
+          article = reader.parse();
+        }
+      }
+    } catch (err) {
+      console.error('[Scraper] Jina AI second-pass failed:', err);
+    } finally {
+      clearTimeout(jinaTimeout);
+    }
+  }
 
   const finalTitle = article?.title || title || 'Untitled';
   const finalContent = article?.content || '';
@@ -106,7 +143,7 @@ export async function scrapeUrl(url: string, providedHtml?: string): Promise<Scr
   const byline = article?.byline || '';
   const siteName = article?.siteName || '';
   
-  // 3. Estimate reading time (average 225 wpm)
+  // 4. Estimate reading time (average 225 wpm)
   const words = finalTextContent.trim().split(/\s+/).length;
   const readingTimeMinutes = Math.max(1, Math.ceil(words / 225));
 
