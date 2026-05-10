@@ -4,8 +4,8 @@ import {
   ChevronRight, X, CheckCircle2, AlertCircle, Info, Tag, Folder,
   Inbox, Star, Search, MoreVertical,
   Archive, Check, MoreHorizontal, Edit3, Save, XCircle,
-  Move, Sun, Moon, Coffee, Highlighter, MessageSquarePlus,
-  StickyNote, ChevronDown
+  Move, Sun, Moon, Highlighter, MessageSquarePlus,
+  StickyNote, ChevronDown, Settings, LogOut, Key
 } from 'lucide-react';
 import { translations, Lang } from './i18n';
 import { Highlight, generateId, captureSelectionContext, applyHighlightsToDOM, isAlreadyHighlighted, mergeOverlappingHighlights, CONTEXT_LENGTH } from './highlights';
@@ -51,6 +51,13 @@ const App: React.FC = () => {
   const [lang, setLang] = useState<Lang>('tr');
   const [theme, setTheme] = useState<Theme>('light');
   const t = translations[lang];
+
+  // Auth State
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [user, setUser] = useState<{ id: string, email: string, name?: string } | null>(null);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
@@ -129,29 +136,38 @@ const App: React.FC = () => {
   const API_BASE  = (import.meta.env.VITE_API_URL  || 'http://localhost:3001').replace(/\/$/, '');
   const API_URL   = `${API_BASE}/api/v1/articles`;
   const PREFS_URL = `${API_BASE}/api/v1/preferences`;
+  const AUTH_URL  = `${API_BASE}/api/v1/auth`;
   const WS_URL    = `${API_BASE.replace(/^https?/, (m: string) => m === 'https' ? 'wss' : 'ws')}/ws`;
-  const API_KEY   = import.meta.env.VITE_API_KEY  || 'dev-secret-key';
+  
+  const getHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
   // Save lang+theme to DB when the user changes them.
-  // Skip when values came from fetchPreferences (lastSyncedPrefs matches) to avoid ping-pong.
   useEffect(() => {
-    if (!prefsLoaded.current) return;
+    if (!prefsLoaded.current || !token) return;
     if (lang === lastSyncedPrefs.current.lang && theme === lastSyncedPrefs.current.theme) return;
     lastSyncedPrefs.current = { lang, theme };
     fetch(PREFS_URL, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'X-API-KEY': API_KEY },
+      headers: getHeaders(),
       body: JSON.stringify({ lang, theme })
     }).catch(() => {});
-  }, [lang, theme]);
+  }, [lang, theme, token]);
 
   useEffect(() => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     fetchPreferences();
     fetchArticles();
+    fetchUser();
     let ws: WebSocket | null = null;
     let reconnectTimeout: number | null = null;
     let isClosing = false;
@@ -176,11 +192,23 @@ const App: React.FC = () => {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) ws.close();
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
-  }, []);
+  }, [token]);
+
+  const fetchUser = async () => {
+    try {
+      const res = await fetch(`${AUTH_URL}/me`, { headers: getHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data);
+      } else if (res.status === 401) {
+        handleLogout();
+      }
+    } catch (err) {}
+  };
 
   const fetchArticles = async () => {
     try {
-      const res = await fetch(API_URL, { headers: { 'X-API-KEY': API_KEY } });
+      const res = await fetch(API_URL, { headers: getHeaders() });
       const data = await res.json();
       if (Array.isArray(data)) setArticles(data);
     } catch (err) { console.error('Failed to fetch:', err); } finally { setLoading(false); }
@@ -188,7 +216,7 @@ const App: React.FC = () => {
 
   const fetchPreferences = async () => {
     try {
-      const res = await fetch(PREFS_URL, { headers: { 'X-API-KEY': API_KEY } });
+      const res = await fetch(PREFS_URL, { headers: getHeaders() });
       const data = await res.json();
       const newLang  = (data.lang  as Lang)  || 'tr';
       const newTheme = (data.theme as Theme) || 'light';
@@ -198,6 +226,54 @@ const App: React.FC = () => {
     } catch (_) {} finally {
       prefsLoaded.current = true;
     }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${AUTH_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authForm.email, password: authForm.password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        setToken(data.token);
+        setUser(data.user);
+        showToast(t.welcomeBack);
+      } else {
+        showToast(data.error || t.invalidCredentials, 'error');
+      }
+    } catch (err) { showToast(t.connectionError, 'error'); }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${AUTH_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(authForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        setToken(data.token);
+        setUser(data.user);
+        showToast(t.updatedSuccessfully);
+      } else {
+        showToast(data.error || t.errorOccurred, 'error');
+      }
+    } catch (err) { showToast(t.connectionError, 'error'); }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+    setArticles([]);
+    setSelectedArticle(null);
   };
 
   const showToast = (message: string, type: ToastType = 'success') => {
@@ -217,7 +293,7 @@ const App: React.FC = () => {
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-API-KEY': API_KEY },
+        headers: getHeaders(),
         body: JSON.stringify({ url: newUrl })
       });
       const data = await res.json();
@@ -236,7 +312,7 @@ const App: React.FC = () => {
         try {
           await fetch(`${API_URL}/${id}`, {
             method: 'DELETE',
-            headers: { 'X-API-KEY': API_KEY }
+            headers: getHeaders()
           });
           setArticles(articles.filter(a => a._id !== id));
           if (selectedArticle?._id === id) setSelectedArticle(null);
@@ -252,7 +328,7 @@ const App: React.FC = () => {
     try {
       const res = await fetch(`${API_URL}/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'X-API-KEY': API_KEY },
+        headers: getHeaders(),
         body: JSON.stringify(updates)
       });
       const updated = await res.json();
@@ -634,24 +710,144 @@ const App: React.FC = () => {
       <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-16 w-auto object-contain rounded-xl shadow-md border border-[var(--border-color)]" />
       <div className="flex items-center gap-1.5">
         <button 
-          onClick={toggleTheme}
+          onClick={() => setIsSettingsOpen(true)}
           className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
-          title={theme === 'light' ? t.themeDark : theme === 'dark' ? t.themeSepia : t.themeLight}
+          title={t.settings}
         >
-          {theme === 'light' ? <Sun className="w-4 h-4" /> : theme === 'dark' ? <Moon className="w-4 h-4" /> : <Coffee className="w-4 h-4" />}
-        </button>
-        <button 
-          onClick={toggleLang}
-          className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border-color)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all shadow-sm"
-          title={lang === 'tr' ? 'English' : 'Türkçe'}
-        >
-          {lang === 'tr' ? 'en' : 'tr'}
+          <Settings className="w-4 h-4" />
         </button>
       </div>
     </div>
   );
 
+  const LoginView = () => (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-500">
+        <div className="flex justify-center mb-8">
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-20 w-auto" />
+        </div>
+        
+        <h2 className="text-2xl font-bold text-center text-slate-800 dark:text-slate-100 mb-2">
+          {authMode === 'login' ? t.welcomeBack : t.createAccount}
+        </h2>
+        <p className="text-center text-slate-500 dark:text-slate-400 mb-8 text-sm">
+          {authMode === 'login' ? t.dontHaveAccount : t.alreadyHaveAccount}{' '}
+          <button 
+            onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+            className="text-blue-600 font-semibold hover:underline"
+          >
+            {authMode === 'login' ? t.register : t.login}
+          </button>
+        </p>
+
+        <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="space-y-4">
+          {authMode === 'register' && (
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t.name}</label>
+              <input 
+                type="text" 
+                required
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white"
+                value={authForm.name}
+                onChange={e => setAuthForm({...authForm, name: e.target.value})}
+              />
+            </div>
+          )}
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t.email}</label>
+            <input 
+              type="email" 
+              required
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white"
+              value={authForm.email}
+              onChange={e => setAuthForm({...authForm, email: e.target.value})}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t.password}</label>
+            <input 
+              type="password" 
+              required
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition-all dark:text-white"
+              value={authForm.password}
+              onChange={e => setAuthForm({...authForm, password: e.target.value})}
+            />
+          </div>
+          <button 
+            type="submit"
+            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98] mt-4"
+          >
+            {authMode === 'login' ? t.login : t.register}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+
+  const SettingsDrawer = () => (
+    <div className={`fixed inset-0 z-[200] ${isSettingsOpen ? 'visible' : 'invisible'}`} onClick={() => setIsSettingsOpen(false)}>
+      <div className={`fixed inset-y-0 right-0 w-full max-w-sm bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-300 ${isSettingsOpen ? 'translate-x-0' : 'translate-x-full'}`} onClick={e => e.stopPropagation()}>
+        <div className="p-6 h-full flex flex-col">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-xl font-bold dark:text-white">{t.settings}</h2>
+            <button onClick={() => setIsSettingsOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+              <X className="w-5 h-5 dark:text-white" />
+            </button>
+          </div>
+
+          <div className="flex-1 space-y-6">
+            <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
+                {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="font-bold dark:text-white truncate">{user?.name || 'User'}</p>
+                <p className="text-sm text-slate-500 truncate">{user?.email}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <button className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors dark:text-white">
+                <Key className="w-5 h-5 text-slate-400" />
+                <span className="font-medium">{t.changePassword}</span>
+              </button>
+              <button onClick={() => { toggleTheme(); }} className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors dark:text-white">
+                {theme === 'light' ? <Moon className="w-5 h-5 text-slate-400" /> : <Sun className="w-5 h-5 text-slate-400" />}
+                <span className="font-medium">{theme === 'light' ? t.themeDark : t.themeLight}</span>
+              </button>
+              <button onClick={() => { toggleLang(); }} className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors dark:text-white text-xs font-bold uppercase tracking-widest">
+                <span className="w-5 text-slate-400 text-center">{lang === 'tr' ? 'EN' : 'TR'}</span>
+                <span className="font-medium">{lang === 'tr' ? 'English' : 'Türkçe'}</span>
+              </button>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <button className="w-full text-left p-4 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">{t.terms}</button>
+              <button className="w-full text-left p-4 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors">{t.privacy}</button>
+            </div>
+          </div>
+
+          <button 
+            onClick={() => { handleLogout(); setIsSettingsOpen(false); }}
+            className="w-full flex items-center justify-center gap-2 p-4 mt-4 bg-red-50 dark:bg-red-500/10 text-red-600 font-bold rounded-2xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+            {t.logout}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   // --- Render Functions ---
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+    </div>
+  );
+
+  if (!token) return <LoginView />;
 
   if (selectedArticle) {
     return (
@@ -669,14 +865,8 @@ const App: React.FC = () => {
               <ArrowLeft className="w-4 h-4" /> {t.back}
             </button>
 
-            {/* Orta: tema */}
-            <button
-              onClick={toggleTheme}
-              className="absolute left-1/2 -translate-x-1/2 w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-main)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--accent-color)] hover:border-[var(--accent-color)] transition-all"
-              title={theme === 'light' ? t.themeDark : theme === 'dark' ? t.themeSepia : t.themeLight}
-            >
-              {theme === 'light' ? <Sun className="w-4 h-4" /> : theme === 'dark' ? <Moon className="w-4 h-4" /> : <Coffee className="w-4 h-4" />}
-            </button>
+            {/* Orta: logo */}
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="logo" className="absolute left-1/2 -translate-x-1/2 h-8 w-auto" />
 
             {/* Sağ: açılır menü + üç nokta */}
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -967,6 +1157,13 @@ const App: React.FC = () => {
                     )}
                   </form>
                 </div>
+
+                <button 
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--bg-card)] border border-transparent hover:border-[var(--border-color)] transition-all"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
               </div>
             </header>
 
@@ -1120,6 +1317,7 @@ const App: React.FC = () => {
           ))}
         </div>
 
+        <SettingsDrawer />
         {confirmModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmModal(null)} />

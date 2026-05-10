@@ -3,7 +3,8 @@ import mongoose from 'mongoose';
 const { Schema, model, models } = mongoose;
 
 const ArticleSchema = new Schema({
-  url: { type: String, required: true, unique: true },
+  owner: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  url: { type: String, required: true }, // Removed unique: true because different users can have same URL
   title: { type: String, required: true },
   description: { type: String },
   content: { type: String }, // Full text content
@@ -30,5 +31,7 @@ const ArticleSchema = new Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
+
+ArticleSchema.index({ owner: 1, url: 1 }, { unique: true });
 
 export const Article = models.Article || model('Article', ArticleSchema);

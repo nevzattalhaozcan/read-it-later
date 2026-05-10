@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const { Schema, model, models } = mongoose;
 
 const UserPreferencesSchema = new Schema({
-  userId: { type: String, default: 'default', unique: true },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
   lang:   { type: String, enum: ['tr', 'en'], default: 'tr' },
   theme:  { type: String, enum: ['light', 'dark', 'sepia'], default: 'light' },
 }, { timestamps: true });

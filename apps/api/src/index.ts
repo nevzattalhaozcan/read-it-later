@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
 import { connectDB } from './lib/db.js';
+import { User } from './models/User.js';
 import { Article } from './models/Article.js';
 import { UserPreferences } from './models/UserPreferences.js';
 import { scrapeUrl } from './utils/scraper.js';
@@ -9,28 +10,42 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const app = new Hono();
+type Variables = {
+  userId: string;
+};
+
+const app = new Hono<{ Variables: Variables }>();
 
 // Middlewares
 app.use('*', cors({
   origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
   allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'X-API-KEY'],
+  allowHeaders: ['Content-Type', 'X-API-KEY', 'Authorization'],
 }));
 
-// Simple Secret Token Auth Middleware
+// JWT Auth Middleware
 const authMiddleware = async (c: any, next: any) => {
-  const apiKey = c.req.header('X-API-KEY');
-  const secret = process.env.API_SECRET || 'dev-secret-key';
+  const authHeader = c.req.header('Authorization');
+  const token = authHeader?.split(' ')[1];
+  const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
   
-  if (apiKey !== secret) {
+  if (!token) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
-  await next();
+
+  try {
+    const decoded = jwt.verify(token, secret) as any;
+    c.set('userId', decoded.userId);
+    await next();
+  } catch (error) {
+    return c.json({ error: 'Invalid token' }, 401);
+  }
 };
 
 // WebSocket logic
@@ -48,12 +63,61 @@ const broadcast = (data: any) => {
 // Routes
 app.get('/', (c) => c.text('Read-it-later API is running'));
 
-const api = new Hono();
+// Auth Routes
+app.post('/api/v1/auth/register', async (c) => {
+  await connectDB();
+  const { email, password, name } = await c.req.json();
+  
+  try {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) return c.json({ error: 'Email already exists' }, 400);
+
+    const user = new User({ email, password, name });
+    await user.save();
+
+    const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
+    const token = jwt.sign({ userId: user._id }, secret, { expiresIn: '30d' });
+
+    return c.json({ token, user: { id: user._id, email, name } }, 201);
+  } catch (error) {
+    return c.json({ error: 'Registration failed' }, 500);
+  }
+});
+
+app.post('/api/v1/auth/login', async (c) => {
+  await connectDB();
+  const { email, password } = await c.req.json();
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return c.json({ error: 'Invalid credentials' }, 401);
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) return c.json({ error: 'Invalid credentials' }, 401);
+
+    const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
+    const token = jwt.sign({ userId: user._id }, secret, { expiresIn: '30d' });
+
+    return c.json({ token, user: { id: user._id, email, name: user.name } });
+  } catch (error) {
+    return c.json({ error: 'Login failed' }, 500);
+  }
+});
+
+const api = new Hono<{ Variables: Variables }>();
 api.use('*', authMiddleware);
+
+api.get('/auth/me', async (c) => {
+  await connectDB();
+  const userId = c.get('userId');
+  const user = await User.findById(userId).select('-password');
+  return c.json(user);
+});
 
 api.get('/articles', async (c) => {
   await connectDB();
-  const articles = await Article.find().sort({ createdAt: -1 });
+  const userId = c.get('userId');
+  const articles = await Article.find({ owner: userId }).sort({ createdAt: -1 });
   return c.json(articles);
 });
 
@@ -64,8 +128,10 @@ api.post('/articles', async (c) => {
   if (!url) return c.json({ error: 'URL is required' }, 400);
 
   try {
+    const userId = c.get('userId');
     const scraped = await scrapeUrl(url, html);
     const article = new Article({
+      owner: userId,
       url,
       ...scraped
     });
@@ -89,7 +155,8 @@ api.get('/check', async (c) => {
   const url = c.req.query('url');
   if (!url) return c.json({ error: 'URL is required' }, 400);
   
-  const article = await Article.findOne({ url });
+  const userId = c.get('userId');
+  const article = await Article.findOne({ owner: userId, url });
   return c.json({ exists: !!article });
 });
 
@@ -99,7 +166,8 @@ api.patch('/articles/:id', async (c) => {
   const id = c.req.param('id');
   const body = await c.req.json();
   
-  const article = await Article.findByIdAndUpdate(id, body, { new: true });
+  const userId = c.get('userId');
+  const article = await Article.findOneAndUpdate({ _id: id, owner: userId }, body, { new: true });
   if (!article) return c.json({ error: 'Article not found' }, 404);
   
   broadcast({ type: 'REFETCH_ARTICLES' });
@@ -108,8 +176,9 @@ api.patch('/articles/:id', async (c) => {
 
 api.delete('/articles/:id', async (c) => {
   await connectDB();
+  const userId = c.get('userId');
   const id = c.req.param('id');
-  await Article.findByIdAndDelete(id);
+  await Article.findOneAndDelete({ _id: id, owner: userId });
   
   // Broadcast change
   broadcast({ type: 'REFETCH_ARTICLES' });
@@ -117,18 +186,20 @@ api.delete('/articles/:id', async (c) => {
   return c.json({ success: true });
 });
 
-// User preferences (singleton, userId='default')
+// User preferences
 api.get('/preferences', async (c) => {
   await connectDB();
-  const prefs = await UserPreferences.findOne({ userId: 'default' });
+  const userId = c.get('userId');
+  const prefs = await UserPreferences.findOne({ userId });
   return c.json(prefs ?? { lang: 'tr', theme: 'light' });
 });
 
 api.patch('/preferences', async (c) => {
   await connectDB();
+  const userId = c.get('userId');
   const body = await c.req.json();
   const prefs = await UserPreferences.findOneAndUpdate(
-    { userId: 'default' },
+    { userId },
     { $set: body },
     { new: true, upsert: true }
   );
