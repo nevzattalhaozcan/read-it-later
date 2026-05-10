@@ -16,7 +16,7 @@ import {
   createUserWithEmailAndPassword, 
   sendEmailVerification, 
   sendPasswordResetEmail,
-  onAuthStateChanged,
+  onIdTokenChanged,
   signOut
 } from 'firebase/auth';
 
@@ -182,36 +182,71 @@ const App: React.FC = () => {
 
   // --- Auth Effects ---
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+    const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
       if (fbUser) {
         const token = await fbUser.getIdToken();
         if (fbUser.emailVerified) {
           localStorage.setItem('token', token);
           setToken(token);
           setPendingVerificationToken(null);
-          // Initial user fetch
-          fetchUser(token);
+          fetchUser();
         } else {
           setPendingVerificationToken(token);
           setRegisterEmail(fbUser.email || '');
         }
+      } else {
+        localStorage.removeItem('token');
+        setToken(null);
+        setUser(null);
       }
     });
     return () => unsubscribe();
   }, []);
 
-  const fetchUser = async (authToken?: string) => {
-    const activeToken = authToken || token;
-    if (!activeToken) return;
+  const apiFetch = async (url: string, options: RequestInit = {}) => {
+    let activeToken = token || localStorage.getItem('token');
+    
+    if (auth.currentUser) {
+      activeToken = await auth.currentUser.getIdToken();
+    }
+
+    const headers: any = {
+      ...options.headers,
+      'Authorization': activeToken ? `Bearer ${activeToken}` : undefined,
+    };
+
+    if (options.body && !(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    let response = await fetch(url, { ...options, headers });
+
+    if (response.status === 401 && auth.currentUser) {
+      try {
+        const newToken = await auth.currentUser.getIdToken(true);
+        setToken(newToken);
+        localStorage.setItem('token', newToken);
+        
+        headers['Authorization'] = `Bearer ${newToken}`;
+        response = await fetch(url, { ...options, headers });
+      } catch (err) {
+        handleLogout();
+      }
+    }
+
+    if (response.status === 401) {
+      handleLogout();
+    }
+
+    return response;
+  };
+
+  const fetchUser = async () => {
     try {
-      const res = await fetch(`${AUTH_URL}/me`, {
-        headers: { 'Authorization': `Bearer ${activeToken}` }
-      });
+      const res = await apiFetch(`${AUTH_URL}/me`);
       if (res.ok) {
         const data = await res.json();
         setUser(data);
-      } else if (res.status === 401) {
-        handleLogout();
       }
     } catch (err) {
       console.error('Fetch user error:', err);
@@ -267,7 +302,7 @@ const App: React.FC = () => {
       setPendingVerificationToken(null);
 
       // Fetch user data from our API
-      await fetchUser(verifiedToken);
+      await fetchUser();
       
       showToast(t.verifySuccess || 'Email verified');
       setVerifyOtp('');
@@ -322,10 +357,6 @@ const App: React.FC = () => {
   const emailRegex = /^[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}$/;
   const WS_URL    = `${API_BASE.replace(/^https?/, (m: string) => m === 'https' ? 'wss' : 'ws')}/ws`;
   
-  const getHeaders = () => ({
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -368,9 +399,8 @@ const App: React.FC = () => {
       widthIdx === lastSyncedPrefs.current.widthIdx
     ) return;
     lastSyncedPrefs.current = { lang, theme, fontSizeIdx, widthIdx };
-    fetch(PREFS_URL, {
+    apiFetch(PREFS_URL, {
       method: 'PATCH',
-      headers: getHeaders(),
       body: JSON.stringify({ lang, theme, fontSizeIdx, widthIdx })
     }).catch(() => {});
   }, [lang, theme, fontSizeIdx, widthIdx, token]);
@@ -411,7 +441,7 @@ const App: React.FC = () => {
 
   const fetchArticles = async () => {
     try {
-      const res = await fetch(API_URL, { headers: getHeaders() });
+      const res = await apiFetch(API_URL);
       const data = await res.json();
       if (Array.isArray(data)) setArticles(data);
     } catch (err) { console.error('Failed to fetch:', err); } finally { setLoading(false); }
@@ -419,7 +449,7 @@ const App: React.FC = () => {
 
   const fetchPreferences = async () => {
     try {
-      const res = await fetch(PREFS_URL, { headers: getHeaders() });
+      const res = await apiFetch(PREFS_URL);
       const data = await res.json();
       const newLang  = (data.lang  as Lang)  || 'tr';
       const newTheme = (data.theme as Theme) || 'light';
@@ -459,7 +489,7 @@ const App: React.FC = () => {
       } else {
         localStorage.setItem('token', idToken);
         setToken(idToken);
-        await fetchUser(idToken);
+        await fetchUser();
         showToast(t.welcomeBack);
       }
     } catch (err: any) {
@@ -533,9 +563,8 @@ const App: React.FC = () => {
       if (mode === 'email') payload.email = settingsForm.email;
       if (mode === 'password') payload.newPassword = settingsForm.newPassword;
 
-      const res = await fetch(`${AUTH_URL}/me`, {
+      const res = await apiFetch(`${AUTH_URL}/me`, {
         method: 'PATCH',
-        headers: getHeaders(),
         body: JSON.stringify(payload)
       });
 
@@ -564,9 +593,8 @@ const App: React.FC = () => {
       confirmLabel: t.resetData,
       onConfirm: async () => {
         try {
-          const res = await fetch(`${API_BASE}/api/v1/data`, {
-            method: 'DELETE',
-            headers: getHeaders()
+          const res = await apiFetch(`${API_BASE}/api/v1/data`, {
+            method: 'DELETE'
           });
           if (!res.ok) throw new Error(t.errorOccurred);
           setArticles([]);
@@ -587,9 +615,8 @@ const App: React.FC = () => {
       confirmLabel: t.deleteAccount,
       onConfirm: async () => {
         try {
-          const res = await fetch(`${AUTH_URL}/me`, {
-            method: 'DELETE',
-            headers: getHeaders()
+          const res = await apiFetch(`${AUTH_URL}/me`, {
+            method: 'DELETE'
           });
           if (!res.ok) throw new Error(t.errorOccurred);
           setConfirmModal(null);
@@ -627,9 +654,8 @@ const App: React.FC = () => {
     setIsAdding(true);
     setUrlError(null);
     try {
-      const res = await fetch(API_URL, {
+      const res = await apiFetch(API_URL, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify({ url: newUrl })
       });
       const data = await res.json();
@@ -646,9 +672,8 @@ const App: React.FC = () => {
       message: t.permanentlyDelete,
       onConfirm: async () => {
         try {
-          await fetch(`${API_URL}/${id}`, {
-            method: 'DELETE',
-            headers: getHeaders()
+          await apiFetch(`${API_URL}/${id}`, {
+            method: 'DELETE'
           });
           setArticles(articles.filter(a => a._id !== id));
           if (selectedArticle?._id === id) setSelectedArticle(null);
@@ -662,9 +687,8 @@ const App: React.FC = () => {
 
   const updateArticle = async (id: string, updates: Partial<Article>) => {
     try {
-      const res = await fetch(`${API_URL}/${id}`, {
+      const res = await apiFetch(`${API_URL}/${id}`, {
         method: 'PATCH',
-        headers: getHeaders(),
         body: JSON.stringify(updates)
       });
       const updated = await res.json();
@@ -848,9 +872,8 @@ const App: React.FC = () => {
     closeContextMenu();
 
     try {
-      const response = await fetch(`${API_BASE}/api/v1/translate`, {
+      const response = await apiFetch(`${API_BASE}/api/v1/translate`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify({ text: sourceText, target, source: 'auto' })
       });
 
