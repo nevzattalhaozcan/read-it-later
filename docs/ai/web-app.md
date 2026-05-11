@@ -22,7 +22,7 @@
 ```
 if (!token)
   if (pendingVerificationToken)
-    → <VerificationWall> (Link verification screen, blocks app access)
+    → <VerificationWall> (Firebase email-link verification screen, blocks app access)
   else
     → <AuthView>         (login / register / forgot password)
 else if (isSettingsOpen)
@@ -65,7 +65,7 @@ All state lives in the `App` component. Key state variables:
 | `forgotError` | `string \| null` | Forgot password error (separate from authError!) |
 | `forgotOpen` | `boolean` | Forgot password panel visibility |
 | `forgotStep` | `null` | **DEPRECATED** (Firebase handles reset flow) |
-| `registerEmail` | `string` | Email captured at register/login, used for verify screen |
+| `pendingVerificationToken` | `string \| null` | Holds the Firebase token while the user finishes email-link verification |
 
 ### Articles & Navigation
 | State | Type | Purpose |
@@ -123,8 +123,8 @@ Plain fetch calls. Called on token mount and triggered by WebSocket messages.
 - `onAuthStateChanged` — Global listener. Auto-syncs `token` and `pendingVerificationToken`.
 - `handleLogin(e)` — `signInWithEmailAndPassword`. If unverified, sets `pendingVerificationToken`.
 - `handleRegister(e)` — `createUserWithEmailAndPassword`. Sends verification email.
-- `handleVerifyCode()` — `fbUser.reload()`. Checks if `emailVerified` is now true.
-- `handleResendVerify()` — `sendEmailVerification` (Firebase link).
+- `handleVerifyCode()` — `fbUser.reload()`. Confirms the verification link was opened and `emailVerified` is now true.
+- `handleResendVerify()` — `sendEmailVerification` (Firebase link resend).
 - `handleRequestReset()` — `sendPasswordResetEmail` (Firebase link).
 
 ---
