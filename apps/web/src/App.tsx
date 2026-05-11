@@ -152,6 +152,7 @@ const App: React.FC = () => {
   const searchContainerMobileRef = useRef<HTMLDivElement>(null);
   const addUrlContainerRef = useRef<HTMLDivElement>(null);
   const addUrlContainerMobileRef = useRef<HTMLDivElement>(null);
+  const articlesFetchSeq = useRef(0);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -450,11 +451,15 @@ const App: React.FC = () => {
   }, [token]);
 
   const fetchArticles = async () => {
+    const requestId = ++articlesFetchSeq.current;
     try {
       const res = await apiFetch(API_URL);
       const data = await res.json();
+      if (requestId !== articlesFetchSeq.current) return;
       if (Array.isArray(data)) setArticles(data.map(normalizeArticle));
-    } catch (err) { console.error('Failed to fetch:', err); } finally { setLoading(false); }
+    } catch (err) { console.error('Failed to fetch:', err); } finally {
+      if (requestId === articlesFetchSeq.current) setLoading(false);
+    }
   };
 
   const fetchPreferences = async () => {
@@ -684,6 +689,7 @@ const App: React.FC = () => {
         setArticles(prev => [nextArticle, ...prev]);
         setNewUrl('');
         showToast(t.saved);
+        void fetchArticles();
       } else { showToast(data.error || t.failedToSave, 'error'); }
     } catch (err) { showToast(t.connectionError, 'error'); } finally { setIsAdding(false); }
   };
