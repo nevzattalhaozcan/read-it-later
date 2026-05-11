@@ -96,8 +96,6 @@ const App: React.FC = () => {
   const [forgotError, setForgotError] = useState<string | null>(null);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
-  const [registerEmail, setRegisterEmail] = useState('');
-  const [verifyOtp, setVerifyOtp] = useState('');
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activePolicy, setActivePolicy] = useState<'terms' | 'privacy' | null>(null);
@@ -198,7 +196,6 @@ const App: React.FC = () => {
           fetchUser();
         } else {
           setPendingVerificationToken(token);
-          setRegisterEmail(fbUser.email || '');
         }
       } else {
         localStorage.removeItem('token');
@@ -288,10 +285,6 @@ const App: React.FC = () => {
   // Verification handlers (after registration)
   const handleVerifyCode = async () => {
     setAuthError(null);
-    if (!verifyOtp || !registerEmail) {
-      setAuthError(t.fillAllFields || 'Please fill in all fields');
-      return;
-    }
     try {
       setVerifyLoading(true);
       const fbUser = auth.currentUser;
@@ -311,7 +304,6 @@ const App: React.FC = () => {
       await fetchUser();
       
       showToast(t.verifySuccess || 'Email verified');
-      setVerifyOtp('');
     } catch (err: any) {
       setAuthError(err?.message || t.errorOccurred);
     } finally { setVerifyLoading(false); }
@@ -322,7 +314,7 @@ const App: React.FC = () => {
     try {
       setVerifyLoading(true);
       await sendEmailVerification(auth.currentUser);
-      showToast(t.verificationCodeSent || 'Verification link sent');
+      showToast(t.verificationCodeSent || 'Verification email sent');
     } catch (err: any) {
       setAuthError(err?.message || t.errorOccurred);
     } finally { setVerifyLoading(false); }
@@ -362,6 +354,18 @@ const App: React.FC = () => {
   const AUTH_URL  = `${API_BASE}/api/v1/auth`;
   const emailRegex = /^[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}$/;
   const WS_URL    = `${API_BASE.replace(/^https?/, (m: string) => m === 'https' ? 'wss' : 'ws')}/ws`;
+
+  const normalizeArticle = useCallback((article: any): Article => ({
+    ...article,
+    title: article?.title || article?.url || '',
+    content: article?.content || '',
+    tags: Array.isArray(article?.tags) ? article.tags : [],
+    folder: typeof article?.folder === 'string' && article.folder.trim() ? article.folder : 'Inbox',
+    highlights: Array.isArray(article?.highlights) ? article.highlights : [],
+    isFavorite: Boolean(article?.isFavorite),
+    isArchived: Boolean(article?.isArchived),
+    isRead: Boolean(article?.isRead),
+  }), []);
   
 
   useEffect(() => {
@@ -449,7 +453,7 @@ const App: React.FC = () => {
     try {
       const res = await apiFetch(API_URL);
       const data = await res.json();
-      if (Array.isArray(data)) setArticles(data);
+      if (Array.isArray(data)) setArticles(data.map(normalizeArticle));
     } catch (err) { console.error('Failed to fetch:', err); } finally { setLoading(false); }
   };
 
@@ -490,7 +494,6 @@ const App: React.FC = () => {
 
       if (!fbUser.emailVerified) {
         setPendingVerificationToken(idToken);
-        setRegisterEmail(fbUser.email || authForm.email);
         showToast(t.verificationCodeSent || 'Please verify your email');
       } else {
         localStorage.setItem('token', idToken);
@@ -532,7 +535,6 @@ const App: React.FC = () => {
       
       const idToken = await fbUser.getIdToken();
       setPendingVerificationToken(idToken);
-      setRegisterEmail(fbUser.email || authForm.email);
       showToast(t.verificationCodeSent || 'Verification link sent to your email');
     } catch (err: any) { 
       let msg = err?.message;
@@ -642,17 +644,29 @@ const App: React.FC = () => {
 
   const handleAdd = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!newUrl) return;
+    const inputUrl = newUrl.trim();
+    if (!inputUrl) return;
 
-    // URL Validation
-    const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
-    if (!urlRegex.test(newUrl)) {
-      setUrlError(lang === 'tr' ? 'Lütfen geçerli bir URL girin' : 'Please enter a valid URL');
+    let normalizedUrl = inputUrl;
+    try {
+      normalizedUrl = new URL(inputUrl).toString();
+    } catch {
+      try {
+        normalizedUrl = new URL(`https://${inputUrl}`).toString();
+      } catch {
+        setUrlError(t.invalidUrl);
+        setTimeout(() => setUrlError(null), 3000);
+        return;
+      }
+    }
+
+    if (!normalizedUrl) {
+      setUrlError(t.invalidUrl);
       setTimeout(() => setUrlError(null), 3000);
       return;
     }
 
-    if (articles.some(a => a.url === newUrl)) {
+    if (articles.some(a => a.url === normalizedUrl)) {
       showToast(t.alreadyExists, 'info');
       return;
     }
@@ -662,11 +676,12 @@ const App: React.FC = () => {
     try {
       const res = await apiFetch(API_URL, {
         method: 'POST',
-        body: JSON.stringify({ url: newUrl })
+        body: JSON.stringify({ url: normalizedUrl })
       });
       const data = await res.json();
       if (data && !data.error) {
-        setArticles([data, ...articles]);
+        const nextArticle = normalizeArticle(data);
+        setArticles(prev => [nextArticle, ...prev]);
         setNewUrl('');
         showToast(t.saved);
       } else { showToast(data.error || t.failedToSave, 'error'); }
@@ -698,9 +713,10 @@ const App: React.FC = () => {
         body: JSON.stringify(updates)
       });
       const updated = await res.json();
-      setArticles(prev => prev.map(a => a._id === id ? updated : a));
+      const normalizedUpdated = normalizeArticle(updated);
+      setArticles(prev => prev.map(a => a._id === id ? normalizedUpdated : a));
       if (selectedArticle?._id === id) {
-        setSelectedArticle(updated);
+        setSelectedArticle(normalizedUpdated);
       }
       setActiveMenuId(null);
       setEditArticle(null);
