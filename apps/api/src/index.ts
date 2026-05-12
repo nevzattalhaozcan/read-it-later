@@ -507,8 +507,8 @@ api.post('/articles', async (c) => {
   
   if (!url) return c.json({ error: 'URL is required' }, 400);
 
+  const userId = c.get('userId');
   try {
-    const userId = c.get('userId');
     
     // 1. Create a placeholder article immediately
     const tempTitle = new URL(url).hostname;
@@ -536,8 +536,17 @@ api.post('/articles', async (c) => {
     return c.json(article.toObject(), 201);
   } catch (error: any) {
     if (error.code === 11000) {
+      logger.warn({ 
+        error: error.message, 
+        code: error.code, 
+        keyPattern: error.keyPattern, 
+        keyValue: error.keyValue,
+        userId,
+        url 
+      }, 'Duplicate article detected');
       return c.json({ error: 'Article already exists' }, 409);
     }
+    logger.error({ error, userId, url }, 'Failed to create article');
     return c.json({ error: 'Failed to create article' }, 500);
   }
 });
@@ -657,7 +666,14 @@ const server = serve({
 });
 
 // Pre-initialize DB and Mailer at startup
-connectDB().catch(err => logger.error({ err }, 'Startup DB connection failed'));
+connectDB().then(async () => {
+  try {
+    const indexes = await Article.listIndexes();
+    logger.info({ indexes }, 'Current Article indexes');
+  } catch (err) {
+    logger.error({ err }, 'Failed to list Article indexes');
+  }
+}).catch(err => logger.error({ err }, 'Startup DB connection failed'));
 getTransporter().catch(err => logger.error({ err }, 'Startup Mailer initialization failed'));
 
 // Create WebSocket server with a specific path

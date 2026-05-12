@@ -31,7 +31,7 @@ const ArticleSchema = new Schema({
   }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-}, { timestamps: true });
+}, { timestamps: true, autoIndex: true });
 
 ArticleSchema.index({ owner: 1, url: 1 }, { unique: true });
 
