@@ -1,6 +1,7 @@
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
 import * as cheerio from 'cheerio';
+import { logger } from '../lib/logger.js';
 
 export interface ScrapedData {
   title: string;
@@ -64,7 +65,7 @@ export async function scrapeUrl(url: string, providedHtml?: string): Promise<Scr
         html.includes('Please enable JS');
 
       if (isCloudflareBlocked || isSPAShell || needsJs) {
-        console.log(`[Scraper] Anti-bot or SPA shell detected for ${url}. Using Jina AI fallback...`);
+        logger.info({ url }, '[Scraper] Anti-bot or SPA shell detected. Using Jina AI fallback...');
         const jinaController = new AbortController();
         const jinaTimeout = setTimeout(() => jinaController.abort(), 15000); // 15s timeout for Jina
         try {
@@ -76,16 +77,16 @@ export async function scrapeUrl(url: string, providedHtml?: string): Promise<Scr
             html = await jinaResponse.text();
           }
         } catch (err) {
-          console.error('[Scraper] Jina AI fallback failed:', err);
+          logger.error({ err, url }, '[Scraper] Jina AI fallback failed');
         } finally {
           clearTimeout(jinaTimeout);
         }
       }
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        console.error(`[Scraper] Request timed out for ${url}`);
+        logger.error({ url }, '[Scraper] Request timed out');
       } else {
-        console.error(`[Scraper] Fetch failed for ${url}:`, err);
+        logger.error({ err, url }, '[Scraper] Fetch failed');
       }
       html = `<html><title>${url}</title><body>Failed to load content.</body></html>`;
     } finally {
@@ -113,7 +114,7 @@ export async function scrapeUrl(url: string, providedHtml?: string): Promise<Scr
 
   // 3. Second-pass fallback if content is still missing/poor and we haven't used Jina yet
   if ((!article?.content || article.textContent.length < 200) && !html.includes('jina-ai')) {
-    console.log(`[Scraper] Content too short or missing for ${url}. Trying Jina AI second-pass...`);
+    logger.info({ url, length: article?.textContent.length }, '[Scraper] Content too short or missing. Trying Jina AI second-pass...');
     const jinaController = new AbortController();
     const jinaTimeout = setTimeout(() => jinaController.abort(), 15000);
     try {
@@ -131,7 +132,7 @@ export async function scrapeUrl(url: string, providedHtml?: string): Promise<Scr
         }
       }
     } catch (err) {
-      console.error('[Scraper] Jina AI second-pass failed:', err);
+      logger.error({ err, url }, '[Scraper] Jina AI second-pass failed');
     } finally {
       clearTimeout(jinaTimeout);
     }

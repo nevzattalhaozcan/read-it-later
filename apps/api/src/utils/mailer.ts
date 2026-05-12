@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { logger } from '../lib/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -18,19 +19,19 @@ export async function getTransporter() {
 
   if (host && user && pass) {
     transporter = nodemailer.createTransport({ host, port, auth: { user, pass }, secure: false });
-    console.log('Email transporter initialized (SMTP)');
+    logger.info({ host, port }, 'Email transporter initialized (SMTP)');
     return transporter;
   }
 
   // Fallback to ethereal test account (free, for development)
   try {
-    console.log('Initializing Ethereal test account for emails...');
+    logger.info('Initializing Ethereal test account for emails...');
     const testAccount = await nodemailer.createTestAccount();
     transporter = nodemailer.createTransport({ host: 'smtp.ethereal.email', port: 587, auth: { user: testAccount.user, pass: testAccount.pass } });
-    console.log('Email transporter initialized (Ethereal)');
+    logger.info('Email transporter initialized (Ethereal)');
     return transporter;
   } catch (error) {
-    console.error('Failed to initialize email transporter:', error);
+    logger.error({ error }, 'Failed to initialize email transporter');
     throw error;
   }
 }
@@ -42,6 +43,6 @@ export async function sendEmail(opts: { to: string; subject: string; text?: stri
   // If using ethereal, return the preview URL to help debugging
   // @ts-ignore
   const preview = nodemailer.getTestMessageUrl(info) || null;
-  if (preview) console.log('Email sent (Ethereal). Preview:', preview);
+  if (preview) logger.info({ preview, to: opts.to }, 'Email sent (Ethereal)');
   return { info, preview };
 }

@@ -1,4 +1,5 @@
 // Highlight utility functions for text-based matching with context
+import { logger } from './utils/logger';
 
 export interface Highlight {
   id: string;
@@ -304,7 +305,7 @@ const wrapTextRange = (
     try {
       wrapRangeAcrossElements(container, startPos, endPos, id, hasNote, onClick);
     } catch {
-      console.warn('Could not apply highlight for id:', id);
+      logger.warn('Could not apply highlight', { id });
     }
   }
 };

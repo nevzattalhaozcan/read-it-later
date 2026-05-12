@@ -16,6 +16,7 @@ import { EmailOTP } from './models/EmailOTP.js';
 import { sendEmail, getTransporter } from './utils/mailer.js';
 import { renderOtpEmail } from './utils/emailTemplates.js';
 import admin from 'firebase-admin';
+import { logger } from './lib/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -31,14 +32,15 @@ try {
       credential: serviceAccount ? admin.credential.cert(serviceAccount) : admin.credential.applicationDefault(),
       projectId: process.env.VITE_FIREBASE_PROJECT_ID
     });
-    console.log('Firebase Admin initialized');
+    logger.info('Firebase Admin initialized');
   }
 } catch (error) {
-  console.error('Firebase Admin init error:', error);
+  logger.error({ error }, 'Firebase Admin init error');
 }
 
 type Variables = {
   userId: string;
+  requestId: string;
 };
 
 const app = new Hono<{ Variables: Variables }>();
@@ -88,6 +90,35 @@ app.use('*', cors({
   allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'X-API-KEY', 'Authorization'],
 }));
+
+// Request ID middleware
+app.use('*', async (c, next) => {
+  const requestId = crypto.randomUUID();
+  c.set('requestId', requestId);
+  c.header('X-Request-Id', requestId);
+  await next();
+});
+
+// Logging middleware
+app.use('*', async (c, next) => {
+  const { method, url } = c.req;
+  const start = Date.now();
+  
+  await next();
+  
+  const ms = Date.now() - start;
+  const status = c.res.status;
+  const requestId = c.get('requestId');
+
+  logger.info({
+    type: 'request',
+    method,
+    url,
+    status,
+    duration: `${ms}ms`,
+    requestId,
+  });
+});
 
 // JWT Auth Middleware
 const authMiddleware = async (c: any, next: any) => {
@@ -186,7 +217,7 @@ app.post('/api/v1/auth/register', async (c) => {
         const text = `Your one-time code is: ${code}. It expires in 10 minutes.`;
         const html = renderOtpEmail(code, 'verify', process.env.APP_NAME || 'sonra-okurum');
         // Background the email sending
-        sendEmail({ to: normalizedEmail, subject, text, html }).catch(err => console.error('Background email failed:', err));
+        sendEmail({ to: normalizedEmail, subject, text, html }).catch(err => logger.error({ err, email: normalizedEmail }, 'Background email failed'));
       } catch (_) {}
 
       const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
@@ -213,7 +244,7 @@ app.post('/api/v1/auth/register', async (c) => {
       const html = renderOtpEmail(code, 'verify', process.env.APP_NAME || 'sonra-okurum');
       // send email but don't block registration on failure
       // Background the email sending
-      sendEmail({ to: normalizedEmail, subject, text, html }).catch(err => console.error('Background email failed:', err));
+      sendEmail({ to: normalizedEmail, subject, text, html }).catch(err => logger.error({ err, email: normalizedEmail }, 'Background email failed'));
     } catch (_) {}
 
     const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
@@ -462,7 +493,7 @@ api.post('/articles', async (c) => {
         await Article.findByIdAndUpdate(article._id, { ...scraped, isPending: false });
         broadcast({ type: 'REFETCH_ARTICLES' });
       } catch (err) {
-        console.error(`[Background Scrape] Failed for ${url}:`, err);
+        logger.error({ err, url }, '[Background Scrape] Failed');
         await Article.findByIdAndUpdate(article._id, { isPending: false });
         broadcast({ type: 'REFETCH_ARTICLES' });
       }
@@ -598,8 +629,8 @@ const server = serve({
 });
 
 // Pre-initialize DB and Mailer at startup
-connectDB().catch(err => console.error('Startup DB connection failed:', err));
-getTransporter().catch(err => console.error('Startup Mailer initialization failed:', err));
+connectDB().catch(err => logger.error({ err }, 'Startup DB connection failed'));
+getTransporter().catch(err => logger.error({ err }, 'Startup Mailer initialization failed'));
 
 // Create WebSocket server with a specific path
 wss = new WebSocketServer({ noServer: true });
@@ -618,8 +649,8 @@ wss = new WebSocketServer({ noServer: true });
 });
 
 wss.on('connection', (ws) => {
-  console.log('Client connected to WebSocket via /ws');
-  ws.on('close', () => console.log('Client disconnected'));
+  logger.info('Client connected to WebSocket via /ws');
+  ws.on('close', () => logger.info('Client disconnected'));
 });
 
-console.log(`Server is running on port ${port}`);
+logger.info(`Server is running on port ${port}`);

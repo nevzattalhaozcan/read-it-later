@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { logger } from './logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
@@ -10,7 +11,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 let connectionPromise: Promise<typeof mongoose> | null = null;
 
 if (!MONGODB_URI) {
-  console.error('MONGODB_URI is not defined in environment variables');
+  logger.error('MONGODB_URI is not defined in environment variables');
 }
 
 export const connectDB = async () => {
@@ -32,10 +33,10 @@ export const connectDB = async () => {
 
   try {
     await connectionPromise;
-    console.log('Successfully connected to MongoDB Atlas');
+    logger.info('Successfully connected to MongoDB Atlas');
   } catch (error) {
     connectionPromise = null;
-    console.error('Error connecting to MongoDB:', error);
+    logger.error({ error }, 'Error connecting to MongoDB');
     throw error;
   }
 };

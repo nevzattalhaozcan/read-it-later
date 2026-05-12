@@ -3,6 +3,7 @@ import { Article } from '../../types/article';
 import { Clock, Bookmark, Star, Trash2, Check } from 'lucide-react';
 import { useArticleStore } from '../../store/useArticleStore';
 import { articleApi } from '../../api/articles';
+import { logger } from '../../utils/logger';
 
 interface ArticleCardProps {
   article: Article;
@@ -18,7 +19,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onOpen }) => 
       const updated = await articleApi.update(article._id, { isRead: !article.isRead });
       updateArticle(article._id, updated);
     } catch (err) {
-      console.error(err);
+      logger.error('Toggle read failed', err);
     }
   };
 
@@ -28,7 +29,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onOpen }) => 
       const updated = await articleApi.update(article._id, { isFavorite: !article.isFavorite });
       updateArticle(article._id, updated);
     } catch (err) {
-      console.error(err);
+      logger.error('Toggle favorite failed', err);
     }
   };
 
@@ -39,7 +40,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({ article, onOpen }) => 
       await articleApi.delete(article._id);
       removeArticle(article._id);
     } catch (err) {
-      console.error(err);
+      logger.error('Delete article failed', err);
     }
   };
 

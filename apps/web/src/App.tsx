@@ -10,6 +10,7 @@ import {
 import { translations, Lang } from './i18n';
 import { policies } from './policies';
 import { Highlight, generateId, captureSelectionContext, applyHighlightsToDOM, isAlreadyHighlighted, mergeOverlappingHighlights, CONTEXT_LENGTH } from './highlights';
+import { logger } from './utils/logger';
 import { auth } from './lib/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -253,7 +254,7 @@ const App: React.FC = () => {
         setUser(data);
       }
     } catch (err) {
-      console.error('Fetch user error:', err);
+      logger.error('Fetch user error', err);
     }
   };
   const prefsLoaded = useRef(false);
@@ -435,9 +436,9 @@ const App: React.FC = () => {
           const data = JSON.parse(event.data);
           if (data.type === 'REFETCH_ARTICLES') fetchArticles();
           if (data.type === 'REFETCH_PREFERENCES') fetchPreferences();
-        } catch (e) { console.error('Error parsing WS message', e); }
+        } catch (e) { logger.error('Error parsing WS message', e); }
       };
-      ws.onopen = () => console.log('Connected to sync server');
+      ws.onopen = () => logger.info('Connected to sync server');
       ws.onclose = () => {
         if (!isClosing) reconnectTimeout = window.setTimeout(() => connectWS(), 5000);
       };
@@ -457,7 +458,7 @@ const App: React.FC = () => {
       const data = await res.json();
       if (requestId !== articlesFetchSeq.current) return;
       if (Array.isArray(data)) setArticles(data.map(normalizeArticle));
-    } catch (err) { console.error('Failed to fetch:', err); } finally {
+    } catch (err) { logger.error('Failed to fetch articles', err); } finally {
       if (requestId === articlesFetchSeq.current) setLoading(false);
     }
   };
