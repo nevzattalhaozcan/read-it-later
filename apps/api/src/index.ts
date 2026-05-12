@@ -59,6 +59,11 @@ const otpCountByEmailWindow = new Map<string, { count: number; windowStart: numb
 const otpCountByIpWindow = new Map<string, { count: number; windowStart: number }>();
 const verifyAttemptsByEmail = new Map<string, { count: number; windowStart: number }>();
 
+// Auth cache: avoids DB lookup on every authenticated request (5-min TTL)
+const AUTH_CACHE = new Map<string, { userId: string; emailVerified: boolean; cachedAt: number }>();
+const AUTH_CACHE_TTL_MS = 5 * 60 * 1000;
+const AUTH_CACHE_MAX_SIZE = 500;
+
 const emailRegex = /^[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}$/;
 
 function normalizeEmail(value: unknown): string {
@@ -120,7 +125,13 @@ app.use('*', async (c, next) => {
   });
 });
 
-// JWT Auth Middleware
+// DB connection middleware — ensures connection once, not per-route
+app.use('/api/*', async (c, next) => {
+  await connectDB();
+  await next();
+});
+
+// JWT Auth Middleware (with in-memory cache to skip DB on repeat requests)
 const authMiddleware = async (c: any, next: any) => {
   const authHeader = c.req.header('Authorization');
   const token = authHeader?.split(' ')[1];
@@ -134,7 +145,18 @@ const authMiddleware = async (c: any, next: any) => {
     const decodedToken = await admin.auth().verifyIdToken(token);
     const { uid, email, name } = decodedToken;
 
-    // Sync with local MongoDB User
+    // Check auth cache first — avoids DB lookup on every request
+    const cached = AUTH_CACHE.get(uid);
+    const now = Date.now();
+    if (cached && (now - cached.cachedAt < AUTH_CACHE_TTL_MS)) {
+      // If email_verified hasn't changed (or was already true), skip DB entirely
+      if (!decodedToken.email_verified || cached.emailVerified) {
+        c.set('userId', cached.userId);
+        return next();
+      }
+    }
+
+    // Cache miss or email_verified changed — sync with MongoDB
     let user = await User.findOne({ firebaseUid: uid });
     if (!user) {
       // migration case: try by email
@@ -157,7 +179,16 @@ const authMiddleware = async (c: any, next: any) => {
       await user.save();
     }
 
-    c.set('userId', user._id.toString());
+    const userId = user._id.toString();
+    c.set('userId', userId);
+
+    // Update auth cache (evict oldest if full)
+    if (AUTH_CACHE.size >= AUTH_CACHE_MAX_SIZE) {
+      const oldestKey = AUTH_CACHE.keys().next().value;
+      if (oldestKey) AUTH_CACHE.delete(oldestKey);
+    }
+    AUTH_CACHE.set(uid, { userId, emailVerified: !!user.emailVerified, cachedAt: Date.now() });
+
     await next();
   } catch (error) {
     // 2. Fallback to legacy JWT for compatibility
@@ -190,7 +221,6 @@ app.get('/api/v1/ping', (c) => c.json({ status: 'ok', timestamp: new Date().toIS
 
 // Auth Routes
 app.post('/api/v1/auth/register', async (c) => {
-  await connectDB();
   const { email, password, name } = await c.req.json();
   const normalizedEmail = normalizeEmail(email);
   const normalizedName = typeof name === 'string' ? name.trim() : '';
@@ -257,16 +287,17 @@ app.post('/api/v1/auth/register', async (c) => {
 });
 
 app.post('/api/v1/auth/login', async (c) => {
-  await connectDB();
   const { email, password } = await c.req.json();
   const normalizedEmail = normalizeEmail(email);
 
   try {
     if (!emailRegex.test(normalizedEmail)) return c.json({ error: 'Invalid credentials' }, 401);
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await User.findOne({ email: normalizedEmail })
+      .select('email name password emailVerified')
+      .lean() as any;
     if (!user) return c.json({ error: 'Invalid credentials' }, 401);
 
-    const isMatch = await user.comparePassword(password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return c.json({ error: 'Invalid credentials' }, 401);
 
     const secret = process.env.JWT_SECRET || 'dev-jwt-secret';
@@ -289,7 +320,6 @@ app.post('/api/v1/auth/login', async (c) => {
 
 // OTP endpoints (send and verify)
 app.post('/api/v1/auth/send-otp', async (c) => {
-  await connectDB();
   const { email, purpose } = await c.req.json();
   if (!email || !purpose) return c.json({ error: 'Email and purpose are required' }, 400);
   // Rate-limit checks
@@ -333,7 +363,6 @@ app.post('/api/v1/auth/send-otp', async (c) => {
 });
 
 app.post('/api/v1/auth/verify-otp', async (c) => {
-  await connectDB();
   const { email, otp, purpose } = await c.req.json();
   if (!email || !otp || !purpose) return c.json({ error: 'Missing parameters' }, 400);
 
@@ -367,7 +396,6 @@ app.post('/api/v1/auth/verify-otp', async (c) => {
 });
 
 app.post('/api/v1/auth/reset-password', async (c) => {
-  await connectDB();
   const { email, otp, newPassword } = await c.req.json();
   if (!email || !otp || !newPassword) return c.json({ error: 'Missing parameters' }, 400);
 
@@ -394,14 +422,12 @@ const api = new Hono<{ Variables: Variables }>();
 api.use('*', authMiddleware);
 
 api.get('/auth/me', async (c) => {
-  await connectDB();
   const userId = c.get('userId');
-  const user = await User.findById(userId).select('-password');
+  const user = await User.findById(userId).select('-password').lean();
   return c.json(user);
 });
 
 api.patch('/auth/me', async (c) => {
-  await connectDB();
   const userId = c.get('userId');
   const { email, currentPassword, newPassword } = await c.req.json();
 
@@ -440,7 +466,6 @@ api.patch('/auth/me', async (c) => {
 });
 
 api.delete('/data', async (c) => {
-  await connectDB();
   const userId = c.get('userId');
   await Article.deleteMany({ owner: userId });
   await UserPreferences.deleteOne({ userId });
@@ -450,7 +475,6 @@ api.delete('/data', async (c) => {
 });
 
 api.delete('/auth/me', async (c) => {
-  await connectDB();
   const userId = c.get('userId');
   await Article.deleteMany({ owner: userId });
   await UserPreferences.deleteOne({ userId });
@@ -461,14 +485,24 @@ api.delete('/auth/me', async (c) => {
 });
 
 api.get('/articles', async (c) => {
-  await connectDB();
   const userId = c.get('userId');
-  const articles = await Article.find({ owner: userId }).sort({ createdAt: -1 });
+  const articles = await Article.find({ owner: userId })
+    .select('-content -textContent')
+    .sort({ createdAt: -1 })
+    .lean();
   return c.json(articles);
 });
 
+// Get single article with full content (for reader view)
+api.get('/articles/:id', async (c) => {
+  const userId = c.get('userId');
+  const id = c.req.param('id');
+  const article = await Article.findOne({ _id: id, owner: userId }).lean();
+  if (!article) return c.json({ error: 'Article not found' }, 404);
+  return c.json(article);
+});
+
 api.post('/articles', async (c) => {
-  await connectDB();
   const { url, html } = await c.req.json();
   
   if (!url) return c.json({ error: 'URL is required' }, 400);
@@ -499,7 +533,7 @@ api.post('/articles', async (c) => {
       }
     })();
     
-    return c.json(article, 201);
+    return c.json(article.toObject(), 201);
   } catch (error: any) {
     if (error.code === 11000) {
       return c.json({ error: 'Article already exists' }, 409);
@@ -510,18 +544,16 @@ api.post('/articles', async (c) => {
 
 // Check if URL exists
 api.get('/check', async (c) => {
-  await connectDB();
   const url = c.req.query('url');
   if (!url) return c.json({ error: 'URL is required' }, 400);
   
   const userId = c.get('userId');
-  const article = await Article.findOne({ owner: userId, url });
-  return c.json({ exists: !!article });
+  const exists = await Article.exists({ owner: userId, url });
+  return c.json({ exists: !!exists });
 });
 
 // Update article (tags, folder, etc.)
 api.patch('/articles/:id', async (c) => {
-  await connectDB();
   const id = c.req.param('id');
   const body = await c.req.json();
   
@@ -534,7 +566,6 @@ api.patch('/articles/:id', async (c) => {
 });
 
 api.delete('/articles/:id', async (c) => {
-  await connectDB();
   const userId = c.get('userId');
   const id = c.req.param('id');
   await Article.findOneAndDelete({ _id: id, owner: userId });
@@ -547,14 +578,12 @@ api.delete('/articles/:id', async (c) => {
 
 // User preferences
 api.get('/preferences', async (c) => {
-  await connectDB();
   const userId = c.get('userId');
   const prefs = await UserPreferences.findOne({ userId });
   return c.json(prefs ?? { lang: 'tr', theme: 'light', fontSizeIdx: 2, widthIdx: 1 });
 });
 
 api.patch('/preferences', async (c) => {
-  await connectDB();
   const userId = c.get('userId');
   const body = await c.req.json();
   const prefs = await UserPreferences.findOneAndUpdate(
@@ -567,7 +596,6 @@ api.patch('/preferences', async (c) => {
 });
 
 api.post('/translate', async (c) => {
-  await connectDB();
   const { text, target, source } = await c.req.json();
 
   if (!text || typeof text !== 'string' || !text.trim()) {

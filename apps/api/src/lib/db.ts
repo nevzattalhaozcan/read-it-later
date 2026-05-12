@@ -29,6 +29,8 @@ export const connectDB = async () => {
     serverSelectionTimeoutMS: 10000,
     connectTimeoutMS: 10000,
     socketTimeoutMS: 20000,
+    maxPoolSize: 10,
+    minPoolSize: 2,
   });
 
   try {

@@ -369,7 +369,7 @@ const App: React.FC = () => {
   const normalizeArticle = useCallback((article: any): Article => ({
     ...article,
     title: article?.title || article?.url || '',
-    content: article?.content || '',
+    content: article?.content ?? '',
     tags: Array.isArray(article?.tags) ? article.tags : [],
     folder: typeof article?.folder === 'string' && article.folder.trim() ? article.folder : 'Inbox',
     highlights: Array.isArray(article?.highlights) ? article.highlights : [],
@@ -399,10 +399,7 @@ const App: React.FC = () => {
     if (!article) return;
 
     deepLinkApplied.current = true;
-    setSelectedArticle(article);
-    if (highlightId) {
-      setTargetHighlightId(highlightId);
-    }
+    selectArticle(articleId, highlightId);
   }, [articles, selectedArticle]);
 
   useEffect(() => {
@@ -469,6 +466,26 @@ const App: React.FC = () => {
       if (Array.isArray(data)) setArticles(data.map(normalizeArticle));
     } catch (err) { logger.error('Failed to fetch articles', err); } finally {
       if (requestId === articlesFetchSeq.current) setLoading(false);
+    }
+  };
+
+  // Lazy-load full article content when opening reader view
+  const selectArticle = async (articleId: string, highlightId?: string | null) => {
+    try {
+      // Show immediately with list data (no content) for instant feedback
+      const listArticle = articles.find(a => a._id === articleId);
+      if (listArticle) setSelectedArticle(listArticle);
+      if (highlightId) setTargetHighlightId(highlightId);
+
+      // Fetch full content from dedicated endpoint
+      const res = await apiFetch(`${API_URL}/${articleId}`);
+      if (res.ok) {
+        const fullData = await res.json();
+        const fullArticle = normalizeArticle(fullData);
+        setSelectedArticle(fullArticle);
+      }
+    } catch (err) {
+      logger.error('Failed to fetch full article', err);
     }
   };
 
@@ -1332,7 +1349,7 @@ const App: React.FC = () => {
                 </div>
               </div>
               <button 
-                onClick={(e) => { e.stopPropagation(); setSelectedArticle(article); }}
+                onClick={(e) => { e.stopPropagation(); selectArticle(article._id); }}
                 className="p-2 hover:bg-blue-600/10 text-blue-600 rounded-xl transition-colors shrink-0"
                 title={t.viewNote}
               >
@@ -1350,8 +1367,7 @@ const App: React.FC = () => {
                     onClick={() => { 
                       if (window.getSelection()?.toString()) return;
                       setShouldShowHighlightPopup(false);
-                      setTargetHighlightId(hl.id); 
-                      setSelectedArticle(article); 
+                      selectArticle(article._id, hl.id); 
                     }}
                   >
                     {/* Highlighted quote */}
@@ -2180,7 +2196,7 @@ const App: React.FC = () => {
                   </div>
                 ) : (
                   filteredArticles.map((article) => (
-                    <div key={article._id} onClick={() => { if (selectedArticleIds.size > 0) toggleArticleSelection(article._id); else setSelectedArticle(article); }} className={`group bg-[var(--bg-card)] p-5 sm:p-7 rounded-[2rem] shadow-sm border ${selectedArticleIds.has(article._id) ? 'border-blue-600 ring-2 ring-blue-600/10' : 'border-[var(--border-color)]'} hover:border-blue-600/30 hover:shadow-xl transition-all cursor-pointer relative theme-transition flex flex-col sm:flex-row gap-6 overflow-visible w-full`}>
+                    <div key={article._id} onClick={() => { if (selectedArticleIds.size > 0) toggleArticleSelection(article._id); else selectArticle(article._id); }} className={`group bg-[var(--bg-card)] p-5 sm:p-7 rounded-[2rem] shadow-sm border ${selectedArticleIds.has(article._id) ? 'border-blue-600 ring-2 ring-blue-600/10' : 'border-[var(--border-color)]'} hover:border-blue-600/30 hover:shadow-xl transition-all cursor-pointer relative theme-transition flex flex-col sm:flex-row gap-6 overflow-visible w-full`}>
                       {/* Selection Checkbox */}
                       <div 
                         onClick={(e) => toggleArticleSelection(article._id, e)}
