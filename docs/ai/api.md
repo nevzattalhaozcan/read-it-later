@@ -31,6 +31,7 @@ https://api.sonra-okurum.com  (prod — check vercel.json for actual domain)
 - **Firebase Auth:** Main strategy for registration, login, and verification.
 - **Legacy JWT:** Supported for backward compatibility. Token payload: `{ userId: string }`.
 - `authMiddleware` verifies the token (Firebase first, then legacy JWT) and synchronizes the user with MongoDB using `firebaseUid`.
+- `authMiddleware` also synchronizes `email` and `emailVerified` from the Firebase token on every request if they have changed.
 - `authMiddleware` is applied to all `/api/v1/*` routes except public ones.
 
 ---
@@ -54,7 +55,7 @@ https://api.sonra-okurum.com  (prod — check vercel.json for actual domain)
 | Method | Path | Body | Response | Broadcasts? |
 |---|---|---|---|---|
 | `GET` | `/api/v1/auth/me` | — | User object (no password) | — |
-| `PATCH` | `/api/v1/auth/me` | `{ email?, currentPassword, newPassword? }` | Updated user | — |
+| `PATCH` | `/api/v1/auth/me` | `{ email?, currentPassword, newPassword? }` | Updated user | Blocked email update for Firebase users |
 | `DELETE` | `/api/v1/auth/me` | — | `{ success }` | REFETCH_ARTICLES + REFETCH_PREFERENCES |
 | `DELETE` | `/api/v1/data` | — | `{ success }` | REFETCH_ARTICLES + REFETCH_PREFERENCES |
 | `GET` | `/api/v1/articles` | — | `Article[]` (sorted by createdAt desc) | — |

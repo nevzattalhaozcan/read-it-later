@@ -126,6 +126,7 @@ Plain fetch calls. Called on token mount and triggered by WebSocket messages.
 - `handleVerifyCode()` — `fbUser.reload()`. Confirms the verification link was opened and `emailVerified` is now true.
 - `handleResendVerify()` — `sendEmailVerification` (Firebase link resend).
 - `handleRequestReset()` — `sendPasswordResetEmail` (Firebase link).
+- `handleSaveSettings(mode)` — For `email`, uses `reauthenticateWithCredential` + `verifyBeforeUpdateEmail`.
 
 ---
 
