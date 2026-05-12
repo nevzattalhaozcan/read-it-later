@@ -12,7 +12,7 @@
 - **Sidebar:** Hidden on screens < `lg` (1024px).
 - **Bottom Navigation:** Fixed to bottom on screens < `lg` for core filters.
 - **Header:** Simplified on mobile with a togglable search bar and "Add URL" popover.
-- **Reader View:** Navigation bar adapts to smaller screens. Article actions menu expands horizontally to the left for a cleaner, integrated look.
+- **Reader View:** Navigation bar adapts to smaller screens. Article actions menu expands horizontally to the left for a cleaner, integrated look. Note indicators are hidden to prevent text overlay; the note editor and context menu are centered horizontally and positioned below the selection/highlight.
 - **Glassmorphism:** Most sticky/fixed UI elements use `.glass` utility for premium aesthetics, though the article actions menu uses a more integrated solid background style.
 
 ---
