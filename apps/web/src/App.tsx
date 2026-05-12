@@ -153,6 +153,9 @@ const App: React.FC = () => {
   const searchContainerMobileRef = useRef<HTMLDivElement>(null);
   const addUrlContainerRef = useRef<HTMLDivElement>(null);
   const addUrlContainerMobileRef = useRef<HTMLDivElement>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+  const translationRef = useRef<HTMLDivElement>(null);
+  const highlightPopoverRef = useRef<HTMLDivElement>(null);
   const articlesFetchSeq = useRef(0);
 
   useEffect(() => {
@@ -175,7 +178,13 @@ const App: React.FC = () => {
       }
 
       // Close context menu on any click outside
-      setContextMenu(null);
+      const isInsideContextMenu = contextMenuRef.current && contextMenuRef.current.contains(target);
+      const isInsideTranslation = translationRef.current && translationRef.current.contains(target);
+      const isInsideHighlightPopover = highlightPopoverRef.current && highlightPopoverRef.current.contains(target);
+
+      if (!isInsideContextMenu && !isInsideTranslation && !isInsideHighlightPopover) {
+        setContextMenu(null);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -1675,6 +1684,7 @@ const App: React.FC = () => {
 
         {contextMenu && (
           <div
+            ref={contextMenuRef}
             className="fixed z-[180] min-w-64 animate-in fade-in zoom-in-95 duration-150"
             style={{ top: contextMenu.y, left: contextMenu.x }}
             onClick={(e) => e.stopPropagation()}
@@ -1724,6 +1734,7 @@ const App: React.FC = () => {
 
         {translationPopover && (
           <div
+            ref={translationRef}
             className="fixed z-[181] w-80 max-w-[calc(100vw-2rem)] animate-in fade-in zoom-in-95 duration-150"
             style={{ top: translationPopover.y + 8, left: translationPopover.x + 8 }}
             onClick={(e) => e.stopPropagation()}
@@ -1797,7 +1808,7 @@ const App: React.FC = () => {
           if (!hasNote && !isInlineEditing) {
             // Pure Highlight - Show only delete
             return (
-              <div className="absolute z-[150] animate-in fade-in zoom-in-95 duration-150" style={{ top: activeHighlightPopover.y, left: activeHighlightPopover.x, transform: 'translate(-50%, -100%) translateY(-10px)' }} onClick={(e) => e.stopPropagation()}>
+              <div ref={highlightPopoverRef} className="absolute z-[150] animate-in fade-in zoom-in-95 duration-150" style={{ top: activeHighlightPopover.y, left: activeHighlightPopover.x, transform: 'translate(-50%, -100%) translateY(-10px)' }} onClick={(e) => e.stopPropagation()}>
                 <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl shadow-xl p-1 flex items-center">
                   <button 
                     onClick={() => deleteHighlight(hl.id)}
@@ -1814,6 +1825,7 @@ const App: React.FC = () => {
           // Highlight with Note - Show Sidebar Edit
           return (
             <div 
+              ref={highlightPopoverRef}
               className="absolute z-[150] animate-in fade-in slide-in-from-left-4 duration-300 pointer-events-none" 
               style={{ 
                 top: activeHighlightPopover.y, 
