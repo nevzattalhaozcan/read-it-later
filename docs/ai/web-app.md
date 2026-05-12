@@ -149,6 +149,9 @@ Plain fetch calls. Called on token mount and triggered by WebSocket messages.
 | `addUrlInputRef` | Auto-focus URL input |
 | `searchContainerRef` | Click-outside detection for search bar |
 | `addUrlContainerRef` | Click-outside detection for URL bar |
+| `contextMenuRef` | Click-outside detection for context menu |
+| `translationRef` | Click-outside detection for translation popover |
+| `highlightPopoverRef` | Click-outside detection for highlight/note popover |
 | `deepLinkApplied` | Prevents double-application of deep link on article open |
 | `prefsLoaded` | Guards preferences sync effect from running before first load |
 | `lastSyncedPrefs` | Tracks last synced prefs to avoid redundant PATCH calls |
