@@ -18,7 +18,10 @@ import {
   sendEmailVerification, 
   sendPasswordResetEmail,
   onIdTokenChanged,
-  signOut
+  signOut,
+  verifyBeforeUpdateEmail,
+  reauthenticateWithCredential,
+  EmailAuthProvider
 } from 'firebase/auth';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -27,7 +30,6 @@ import { Browser } from '@capacitor/browser';
 
 // --- Platform Helpers ---
 const isNative = Capacitor.isNativePlatform();
-const getPlatform = () => Capacitor.getPlatform();
 
 // --- Types ---
 interface Article {
@@ -613,6 +615,24 @@ const App: React.FC = () => {
   const handleSaveSettings = async (mode: 'email' | 'password') => {
     setSettingsLoading(true);
     try {
+      // If we have a Firebase user and changing email, use Firebase verification flow
+      if (mode === 'email' && auth.currentUser) {
+        if (!settingsForm.currentPassword) {
+          throw new Error(t.reauthenticateRequired);
+        }
+        
+        // Re-authenticate first
+        const credential = EmailAuthProvider.credential(auth.currentUser.email!, settingsForm.currentPassword);
+        await reauthenticateWithCredential(auth.currentUser, credential);
+        
+        // Send verification link to new email
+        await verifyBeforeUpdateEmail(auth.currentUser, settingsForm.email);
+        
+        setSettingsForm(prev => ({ ...prev, currentPassword: '', newPassword: '' }));
+        showToast(t.emailVerificationLinkSent, 'info');
+        return;
+      }
+
       const payload: Record<string, string> = { currentPassword: settingsForm.currentPassword };
       if (mode === 'email') payload.email = settingsForm.email;
       if (mode === 'password') payload.newPassword = settingsForm.newPassword;

@@ -60,7 +60,7 @@ const otpCountByIpWindow = new Map<string, { count: number; windowStart: number 
 const verifyAttemptsByEmail = new Map<string, { count: number; windowStart: number }>();
 
 // Auth cache: avoids DB lookup on every authenticated request (5-min TTL)
-const AUTH_CACHE = new Map<string, { userId: string; emailVerified: boolean; cachedAt: number }>();
+const AUTH_CACHE = new Map<string, { userId: string; emailVerified: boolean; email: string; cachedAt: number }>();
 const AUTH_CACHE_TTL_MS = 5 * 60 * 1000;
 const AUTH_CACHE_MAX_SIZE = 500;
 
@@ -149,14 +149,16 @@ const authMiddleware = async (c: any, next: any) => {
     const cached = AUTH_CACHE.get(uid);
     const now = Date.now();
     if (cached && (now - cached.cachedAt < AUTH_CACHE_TTL_MS)) {
-      // If email_verified hasn't changed (or was already true), skip DB entirely
-      if (!decodedToken.email_verified || cached.emailVerified) {
+      // If email_verified hasn't changed AND email hasn't changed, skip DB entirely
+      const emailVerifiedNotChanged = !decodedToken.email_verified || cached.emailVerified;
+      const emailNotChanged = email === cached.email;
+      if (emailVerifiedNotChanged && emailNotChanged) {
         c.set('userId', cached.userId);
         return next();
       }
     }
 
-    // Cache miss or email_verified changed — sync with MongoDB
+    // Cache miss or email_verified/email changed — sync with MongoDB
     let user = await User.findOne({ firebaseUid: uid });
     if (!user) {
       // migration case: try by email
@@ -174,9 +176,19 @@ const authMiddleware = async (c: any, next: any) => {
           emailVerified: decodedToken.email_verified || false
         });
       }
-    } else if (decodedToken.email_verified && !user.emailVerified) {
-      user.emailVerified = true;
-      await user.save();
+    } else {
+      let needsSave = false;
+      if (decodedToken.email_verified && !user.emailVerified) {
+        user.emailVerified = true;
+        needsSave = true;
+      }
+      if (email && email !== user.email) {
+        user.email = email;
+        needsSave = true;
+      }
+      if (needsSave) {
+        await user.save();
+      }
     }
 
     const userId = user._id.toString();
@@ -187,7 +199,7 @@ const authMiddleware = async (c: any, next: any) => {
       const oldestKey = AUTH_CACHE.keys().next().value;
       if (oldestKey) AUTH_CACHE.delete(oldestKey);
     }
-    AUTH_CACHE.set(uid, { userId, emailVerified: !!user.emailVerified, cachedAt: Date.now() });
+    AUTH_CACHE.set(uid, { userId, emailVerified: !!user.emailVerified, email: user.email, cachedAt: Date.now() });
 
     await next();
   } catch (error) {
@@ -449,6 +461,9 @@ api.patch('/auth/me', async (c) => {
   if (!isMatch) return c.json({ error: 'Invalid credentials' }, 401);
 
   if (wantsEmailChange) {
+    if (user.firebaseUid) {
+      return c.json({ error: 'Email update for Firebase users must be done via verification link' }, 400);
+    }
     const normalizedEmail = email.trim().toLowerCase();
     const existingUser = await User.findOne({ email: normalizedEmail, _id: { $ne: userId } });
     if (existingUser) return c.json({ error: 'Email already exists' }, 400);
