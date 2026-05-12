@@ -821,73 +821,85 @@ const App: React.FC = () => {
     // If left button is still down (selection in progress), don't show context menu
     if (e.buttons & 1) return;
     
-    e.preventDefault();
-
     const selection = window.getSelection();
     const text = selection?.toString().trim() || '';
-    if (!selection || selection.isCollapsed || !text || !articleContentRef.current || !selection.rangeCount) {
-      setContextMenu(null);
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-    const commonAncestor = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
-      ? range.commonAncestorContainer
-      : range.commonAncestorContainer.parentElement;
-
-    if (!commonAncestor || !articleContentRef.current.contains(commonAncestor)) {
-      setContextMenu(null);
-      return;
-    }
-
-    const context = captureSelectionContext(articleContentRef.current, selection);
-    if (!context) {
-      setContextMenu(null);
-      return;
-    }
-
-    const highlightIdFromContext = (selectedArticle?.highlights || []).find((h) => {
-      if (h.startOffset !== undefined && h.text === context.text && h.startOffset === context.startOffset) {
-        return true;
-      }
-
-      const hStart = h.startOffset ?? -1;
-      if (hStart < 0) return false;
-      const hEnd = hStart + h.text.length;
-      const selectionEnd = context.startOffset + context.text.length;
-      return context.startOffset >= hStart && selectionEnd <= hEnd;
-    })?.id || null;
-
+    const hasSelection = selection && !selection.isCollapsed && text && selection.rangeCount > 0;
+    
     const target = e.target;
     const elementTarget = target instanceof Element ? target : null;
     const highlightElement = elementTarget?.closest('mark[data-highlight-id]');
+    const highlightIdFromAttr = highlightElement?.getAttribute('data-highlight-id');
 
-    // Boundary checks for context menu
-    const menuWidth = 260;
-    const menuHeight = 180;
-    let x = e.clientX;
-    let y = e.clientY;
+    let shouldShowMenu = false;
+    let menuText = text;
+    let finalHighlightId = highlightIdFromAttr;
 
-    if (x + menuWidth > window.innerWidth) {
-      x = window.innerWidth - menuWidth - 12;
+    // 1. Check if selection is within article content
+    if (hasSelection) {
+      const range = selection!.getRangeAt(0);
+      const commonAncestor = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+        ? range.commonAncestorContainer
+        : range.commonAncestorContainer.parentElement;
+
+      if (commonAncestor && articleContentRef.current?.contains(commonAncestor)) {
+        shouldShowMenu = true;
+        
+        // Try to find highlight ID from context if not clicked directly on a mark
+        if (!finalHighlightId) {
+          const context = captureSelectionContext(articleContentRef.current, selection!);
+          if (context) {
+            finalHighlightId = (selectedArticle?.highlights || []).find((h) => {
+              if (h.startOffset !== undefined && h.text === context.text && h.startOffset === context.startOffset) {
+                return true;
+              }
+              const hStart = h.startOffset ?? -1;
+              if (hStart < 0) return false;
+              const hEnd = hStart + h.text.length;
+              const selectionEnd = context.startOffset + context.text.length;
+              return context.startOffset >= hStart && selectionEnd <= hEnd;
+            })?.id || null;
+          }
+        }
+      }
+    } else if (highlightIdFromAttr) {
+      // 2. Right clicked on a highlight mark without selection
+      shouldShowMenu = true;
+      const hl = (selectedArticle?.highlights || []).find(h => h.id === highlightIdFromAttr);
+      if (hl) menuText = hl.text;
     }
-    if (y + menuHeight > window.innerHeight) {
-      y = window.innerHeight - menuHeight - 12;
+
+    if (shouldShowMenu) {
+      e.preventDefault();
+      
+      // Boundary checks for context menu
+      const menuWidth = 260;
+      const menuHeight = 220; 
+      let x = e.clientX;
+      let y = e.clientY;
+
+      if (x + menuWidth > window.innerWidth) {
+        x = window.innerWidth - menuWidth - 12;
+      }
+      if (y + menuHeight > window.innerHeight) {
+        y = window.innerHeight - menuHeight - 12;
+      }
+
+      x = Math.max(12, x);
+      y = Math.max(12, y);
+
+      setContextMenu({
+        x,
+        y,
+        text: menuText,
+        highlightId: finalHighlightId
+      });
+      setTranslationPopover(null);
+      setHighlightToolbar(null);
+      setActiveHighlightPopover(null);
+    } else {
+      // Allow native context menu to show up
+      setContextMenu(null);
     }
-
-    // Ensure x and y are not negative
-    x = Math.max(12, x);
-    y = Math.max(12, y);
-
-    setContextMenu({
-      x,
-      y,
-      text: context.text,
-      highlightId: highlightElement?.getAttribute('data-highlight-id') || highlightIdFromContext
-    });
-    setTranslationPopover(null);
-    setHighlightToolbar(null);
-    setActiveHighlightPopover(null);
   }, [selectedArticle, lang, t]);
 
   const closeContextMenu = () => setContextMenu(null);
