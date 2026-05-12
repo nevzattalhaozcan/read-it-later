@@ -1228,6 +1228,7 @@ const App: React.FC = () => {
       case 'archive': return a.isArchived;
       case 'highlights': return (a.highlights?.length || 0) > 0;
     }
+    return true;
   });
 
   const toggleArticleSelection = (id: string, e?: React.MouseEvent) => {
