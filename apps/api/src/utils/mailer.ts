@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { logger } from '../lib/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 let transporter: nodemailer.Transporter | null = null;
 
