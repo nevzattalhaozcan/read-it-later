@@ -3,9 +3,9 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  // Capacitor loads from local fs, needs '/'
+  // Capacitor loads from local fs, needs relative paths
   // Vercel needs '/sonra-okurum/'
-  base: mode === 'capacitor' ? '/' : '/sonra-okurum/',
+  base: mode === 'capacitor' ? '' : '/sonra-okurum/',
   plugins: [react()],
   server: {
     port: 5173,
