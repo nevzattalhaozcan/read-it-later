@@ -938,11 +938,21 @@ const App: React.FC = () => {
       let x = e.clientX;
       let y = e.clientY;
 
-      if (x + menuWidth > window.innerWidth) {
-        x = window.innerWidth - menuWidth - 12;
-      }
-      if (y + menuHeight > window.innerHeight) {
-        y = window.innerHeight - menuHeight - 12;
+      const isMobile = window.innerWidth < 1024;
+      if (isMobile && hasSelection) {
+        const range = selection!.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        // Position below the selection
+        y = rect.bottom + 8;
+        // Center horizontally on mobile
+        x = window.innerWidth / 2 - menuWidth / 2;
+      } else {
+        if (x + menuWidth > window.innerWidth) {
+          x = window.innerWidth - menuWidth - 12;
+        }
+        if (y + menuHeight > window.innerHeight) {
+          y = window.innerHeight - menuHeight - 12;
+        }
       }
 
       x = Math.max(12, x);
@@ -1128,10 +1138,20 @@ const App: React.FC = () => {
       if (mark) {
         const rect = mark.getBoundingClientRect();
         const containerRect = articleContentRef.current?.getBoundingClientRect();
-        pos = {
-          y: rect.top + window.scrollY,
-          x: containerRect ? containerRect.right + 20 : rect.right + 20
-        };
+        const isMobile = window.innerWidth < 1024;
+
+        if (isMobile) {
+          // On mobile, position below the highlight and center horizontally
+          pos = {
+            y: rect.bottom + window.scrollY + 10,
+            x: window.innerWidth / 2
+          };
+        } else {
+          pos = {
+            y: rect.top + window.scrollY,
+            x: containerRect ? containerRect.right + 20 : rect.right + 20
+          };
+        }
       }
     }
 
@@ -1141,10 +1161,7 @@ const App: React.FC = () => {
       
       // Ensure popover stays within horizontal bounds
       let x = pos.x;
-      if (isMobile) {
-        // On mobile, try to center or at least keep within screen
-        x = Math.max(popoverWidth / 2 + 10, Math.min(window.innerWidth - popoverWidth / 2 - 10, x));
-      } else {
+      if (!isMobile) {
         // On desktop, ensure it doesn't go off right edge
         if (x + popoverWidth > window.innerWidth) {
           x = window.innerWidth - popoverWidth - 20;
@@ -1841,7 +1858,7 @@ const App: React.FC = () => {
         {noteIndicators.filter(i => activeHighlightPopover?.id !== i.id).map(indicator => (
           <button 
             key={indicator.id}
-            className="absolute z-[40] cursor-pointer transition-all animate-in fade-in zoom-in duration-500 group"
+            className="hidden lg:block absolute z-[40] cursor-pointer transition-all animate-in fade-in zoom-in duration-500 group"
             style={{ top: indicator.y, left: indicator.x, transform: 'translateY(-50%)' }}
             onClick={(e) => { e.stopPropagation(); openHighlightAction(indicator.id, { x: indicator.x, y: indicator.y }); }}
             title={t.viewNote}
@@ -1890,14 +1907,17 @@ const App: React.FC = () => {
           }
 
           // Highlight with Note - Show Sidebar Edit
+          const isMobile = window.innerWidth < 1024;
           return (
             <div 
               ref={highlightPopoverRef}
-              className="absolute z-[150] animate-in fade-in slide-in-from-left-4 duration-300 pointer-events-none" 
+              className={`absolute z-[150] animate-in fade-in ${isMobile ? 'zoom-in-95' : 'slide-in-from-left-4'} duration-300 pointer-events-none`} 
               style={{ 
                 top: activeHighlightPopover.y, 
                 left: activeHighlightPopover.x,
-                width: '240px' 
+                width: isMobile ? 'calc(100vw - 32px)' : '240px',
+                maxWidth: isMobile ? '400px' : 'none',
+                transform: isMobile ? 'translateX(-50%)' : 'none'
               }}
               onClick={(e) => e.stopPropagation()}
             >
