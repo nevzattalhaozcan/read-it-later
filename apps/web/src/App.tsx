@@ -20,6 +20,14 @@ import {
   onIdTokenChanged,
   signOut
 } from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Clipboard } from '@capacitor/clipboard';
+import { Browser } from '@capacitor/browser';
+
+// --- Platform Helpers ---
+const isNative = Capacitor.isNativePlatform();
+const getPlatform = () => Capacitor.getPlatform();
 
 // --- Types ---
 interface Article {
@@ -381,6 +389,12 @@ const App: React.FC = () => {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    
+    // Initialize Status Bar for native platforms
+    if (isNative) {
+      StatusBar.setStyle({ style: theme === 'dark' ? Style.Dark : Style.Light });
+      StatusBar.setBackgroundColor({ color: theme === 'dark' ? '#020617' : '#f8fafc' });
+    }
   }, [theme]);
 
   useEffect(() => {
@@ -933,7 +947,11 @@ const App: React.FC = () => {
 
   const copyTextToClipboard = async (value: string, toastMessage: string) => {
     try {
-      await navigator.clipboard.writeText(value);
+      if (isNative) {
+        await Clipboard.write({ string: value });
+      } else {
+        await navigator.clipboard.writeText(value);
+      }
       showToast(toastMessage);
     } catch {
       showToast(t.connectionError, 'error');
@@ -948,9 +966,14 @@ const App: React.FC = () => {
   };
 
 
-  const handleSearchGoogle = () => {
+  const handleSearchGoogle = async () => {
     if (!contextMenu?.text) return;
-    window.open(`https://www.google.com/search?q=${encodeURIComponent(contextMenu.text)}`, '_blank', 'noopener,noreferrer');
+    const url = `https://www.google.com/search?q=${encodeURIComponent(contextMenu.text)}`;
+    if (isNative) {
+      await Browser.open({ url });
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
     closeContextMenu();
   };
 
@@ -1638,7 +1661,14 @@ const App: React.FC = () => {
                   </TooltipButton>
 
                   <TooltipButton 
-                    onClick={() => { window.open(selectedArticle.url, '_blank', 'noopener,noreferrer'); setIsArticleMenuOpen(false); }} 
+                    onClick={async () => { 
+                      if (isNative) {
+                        await Browser.open({ url: selectedArticle.url });
+                      } else {
+                        window.open(selectedArticle.url, '_blank', 'noopener,noreferrer');
+                      }
+                      setIsArticleMenuOpen(false); 
+                    }} 
                     tooltip={t.menuSource || t.original}
                     className="w-8 h-8 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] rounded-lg transition-colors"
                   >
