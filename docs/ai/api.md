@@ -42,6 +42,7 @@ https://api.sonra-okurum.com  (prod — check vercel.json for actual domain)
 | Method | Path | Body | Response | Notes |
 |---|---|---|---|---|
 | `GET` | `/` | — | `text` | Health check |
+| `GET` | `/api/v1/ping` | — | `{ status, timestamp }` | Keep-alive ping |
 | `POST` | `/api/v1/auth/register` | `{ email, password, name }` | `{ token, user }` | **DEPRECATED** (Use Firebase SDK on client) |
 | `POST` | `/api/v1/auth/login` | `{ email, password }` | `{ token, user }` | **DEPRECATED** (Use Firebase SDK on client) |
 | `POST` | `/api/v1/auth/send-otp` | `{ email, purpose }` | `{ success }` | **DEPRECATED** (Firebase handles mail) |

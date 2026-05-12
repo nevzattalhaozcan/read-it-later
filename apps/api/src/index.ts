@@ -155,6 +155,7 @@ const broadcast = (data: any) => {
 
 // Routes
 app.get('/', (c) => c.text('Read-it-later API is running'));
+app.get('/api/v1/ping', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 // Auth Routes
 app.post('/api/v1/auth/register', async (c) => {
