@@ -45,7 +45,7 @@ https://api.sonra-okurum.com  (prod — check vercel.json for actual domain)
 | `GET` | `/` | — | `text` | Health check |
 | `GET` | `/api/v1/ping` | — | `{ status, timestamp }` | Keep-alive ping |
 | `POST` | `/api/v1/auth/register` | `{ email, password, name }` | `{ token, user }` | **DEPRECATED** (Use Firebase SDK on client) |
-| `POST` | `/api/v1/auth/login` | `{ email, password }` | `{ token, user }` | **DEPRECATED** (Use Firebase SDK on client) |
+| `POST` | `/api/v1/auth/login` | `{ email, password }` | `{ token, user }` | Used by Extension (Web app uses Firebase SDK) |
 | `POST` | `/api/v1/auth/send-otp` | `{ email, purpose }` | `{ success }` | **DEPRECATED** (Firebase handles mail) |
 | `POST` | `/api/v1/auth/verify-otp` | `{ email, otp, purpose }` | `{ success }` | **DEPRECATED** |
 | `POST` | `/api/v1/auth/reset-password` | `{ email, otp, newPassword }` | `{ success }` | **DEPRECATED** |
@@ -100,6 +100,12 @@ https://api.sonra-okurum.com  (prod — check vercel.json for actual domain)
 3. Client sends ID Token to API.
 4. API verifies token via `admin.auth().verifyIdToken(token)`.
 5. API syncs `firebaseUid` and `emailVerified` with local MongoDB `User` doc.
+
+**Extension Auth Flow:**
+1. Extension collects email/password and calls `POST /api/v1/auth/login`.
+2. API verifies credentials, generates a legacy JWT, and returns it.
+3. Extension stores JWT in `chrome.storage.local` and sends it in `Authorization: Bearer <token>`.
+4. API's `authMiddleware` verifies the legacy JWT as a fallback.
 
 **Legacy Flow:** (Deprecated)
 1. Register →  save user →  generate OTP  →  sendEmail() in background
