@@ -159,6 +159,89 @@
     }
     .status-dot.success { background: #059669; }
     .status-dot.error   { background: #dc2626; }
+
+    /* ── Login View ── */
+    #loginView {
+      padding: 20px 16px;
+      display: none;
+    }
+    .input-group {
+      margin-bottom: 12px;
+    }
+    .input-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .input-group input:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+    }
+    #loginBtn {
+      width: 100%;
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 11px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      margin-top: 8px;
+      transition: background 0.15s, transform 0.12s;
+    }
+    #loginBtn:hover { background: #1d4ed8; transform: translateY(-1px); }
+    #loginBtn:active { transform: translateY(0); }
+    #loginBtn:disabled { background: #e2e8f0; color: #94a3b8; cursor: default; }
+
+    .login-footer {
+      margin-top: 16px;
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    /* ── Main View ── */
+    #mainView {
+      display: block;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      padding: 10px 16px;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      justify-content: flex-end;
+    }
+    #logoutBtn {
+      font-size: 11px;
+      color: #94a3b8;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+    #logoutBtn:hover {
+      background: #f1f5f9;
+      color: #64748b;
+    }
   </style>
 </head>
 <body>
@@ -173,20 +256,44 @@
     </div>
   </div>
 
-  <div class="page-info">
-    <img id="pageFavicon" style="display:none" alt="" />
-    <div id="faviconPlaceholder" class="favicon-placeholder"></div>
-    <div>
-      <div id="pageTitle" style="color:#94a3b8;font-weight:500">sayfa yükleniyor…</div>
-      <div id="pageHost"></div>
+  <div id="loginView">
+    <div class="input-group">
+      <label id="labelEmail" for="email">Email</label>
+      <input type="email" id="email" placeholder="email@example.com" required>
+    </div>
+    <div class="input-group">
+      <label id="labelPassword" for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" required>
+    </div>
+    <button id="loginBtn">
+      <span id="loginBtnText">Log In</span>
+    </button>
+    <div id="loginStatus"></div>
+    <div class="login-footer" id="loginFooter">
+      sonra-okurum extension
     </div>
   </div>
 
-  <div class="actions">
-    <button id="saveBtn">
-      <span id="btnText">kütüphaneye kaydet</span>
-    </button>
-    <div id="status"></div>
+  <div id="mainView">
+    <div class="page-info">
+      <img id="pageFavicon" style="display:none" alt="" />
+      <div id="faviconPlaceholder" class="favicon-placeholder"></div>
+      <div>
+        <div id="pageTitle" style="color:#94a3b8;font-weight:500">sayfa yükleniyor…</div>
+        <div id="pageHost"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="saveBtn">
+        <span id="btnText">kütüphaneye kaydet</span>
+      </button>
+      <div id="status"></div>
+    </div>
+
+    <div class="footer">
+      <button id="logoutBtn">Çıkış Yap</button>
+    </div>
   </div>
 
   <script src="popup.js"></script>

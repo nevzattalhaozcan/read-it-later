@@ -91,7 +91,11 @@ function incrementWindow(map: Map<string, { count: number; windowStart: number }
 
 // Middlewares
 app.use('*', cors({
-  origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  origin: (origin) => {
+    if (!origin) return process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+    if (origin.startsWith('chrome-extension://')) return origin;
+    return process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+  },
   allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'X-API-KEY', 'Authorization'],
 }));

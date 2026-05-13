@@ -3,9 +3,9 @@
   "name": "ReadIt Later Saver",
   "version": "1.0",
   "description": "Quickly save articles to your ReadIt Later app.",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "storage"],
   "action": {
     "default_popup": "popup.html"
   },
-  "host_permissions": ["http://localhost/*"]
+  "host_permissions": ["http://localhost/*", "https://*.vercel.app/*"]
 }
