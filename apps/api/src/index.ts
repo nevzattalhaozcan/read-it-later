@@ -135,6 +135,21 @@ app.use('/api/*', async (c, next) => {
   await next();
 });
 
+// Global Error Handler
+app.onError((err, c) => {
+  const requestId = c.get('requestId');
+  logger.error({ 
+    err: {
+      message: err.message,
+      stack: err.stack,
+    },
+    url: c.req.url,
+    method: c.req.method,
+    requestId
+  }, 'Unhandled Error');
+  return c.json({ error: 'Internal server error' }, 500);
+});
+
 // JWT Auth Middleware (with in-memory cache to skip DB on repeat requests)
 const authMiddleware = async (c: any, next: any) => {
   const authHeader = c.req.header('Authorization');
@@ -297,21 +312,46 @@ app.post('/api/v1/auth/register', async (c) => {
     const token = jwt.sign({ userId: user._id }, secret, { expiresIn: '30d' });
 
     return c.json({ token, user: { id: user._id, email: user.email, name: user.name, emailVerified: false }, requiresVerification: true }, 201);
-  } catch (error) {
+  } catch (error: any) {
+    logger.error({ 
+      error: error.message, 
+      stack: error.stack, 
+      requestId: c.get('requestId'),
+      email: normalizedEmail 
+    }, 'Registration failed');
     return c.json({ error: 'Registration failed' }, 500);
   }
 });
 
 app.post('/api/v1/auth/login', async (c) => {
-  const { email, password } = await c.req.json();
+  let body;
+  try {
+    body = await c.req.json();
+  } catch (e) {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const { email, password } = body;
   const normalizedEmail = normalizeEmail(email);
 
   try {
     if (!emailRegex.test(normalizedEmail)) return c.json({ error: 'Invalid credentials' }, 401);
+    
     const user = await User.findOne({ email: normalizedEmail })
-      .select('email name password emailVerified')
+      .select('email name password firebaseUid emailVerified')
       .lean() as any;
+
     if (!user) return c.json({ error: 'Invalid credentials' }, 401);
+
+    // If user has no password, they likely signed up via Firebase/Social login
+    if (!user.password) {
+      if (user.firebaseUid) {
+        return c.json({ 
+          error: 'This account uses Social Login. Please log in via the web application.' 
+        }, 403);
+      }
+      return c.json({ error: 'Invalid credentials' }, 401);
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return c.json({ error: 'Invalid credentials' }, 401);
@@ -329,7 +369,13 @@ app.post('/api/v1/auth/login', async (c) => {
     }
 
     return c.json({ token, user: { id: user._id, email, name: user.name, emailVerified: true } });
-  } catch (error) {
+  } catch (error: any) {
+    logger.error({ 
+      error: error.message, 
+      stack: error.stack, 
+      requestId: c.get('requestId'),
+      email: normalizedEmail 
+    }, 'Login failed');
     return c.json({ error: 'Login failed' }, 500);
   }
 });
