@@ -7,5 +7,5 @@
   "action": {
     "default_popup": "popup.html"
   },
-  "host_permissions": ["http://localhost/*", "https://*.vercel.app/*"]
+  "host_permissions": ["http://localhost/*", "https://read-it-later-0kwt.onrender.com/*", "https://*.vercel.app/*"]
 }
