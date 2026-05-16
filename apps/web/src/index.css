@@ -47,9 +47,13 @@
 }
 
 html, body {
-  overflow-x: hidden;
-  width: 100%;
-  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Prevent elastic/rubber-band scroll on iOS WebKit */
+html {
+  overscroll-behavior: none;
 }
 
 body {
@@ -60,11 +64,33 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  min-height: 100dvh;
+  overscroll-behavior: none;
   /* Safe area support for Capacitor — top/sides only; bottom is handled by .safe-pb and the nav bar */
   padding-top: env(safe-area-inset-top);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Remove tap flash on iOS */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent 300ms tap delay on interactive elements */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Prevent iOS auto-zoom on input focus (requires font-size >= 16px) */
+@media (max-width: 1024px) {
+  input, textarea, select {
+    font-size: 16px;
+  }
 }
 
 .glass {

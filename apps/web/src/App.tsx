@@ -166,6 +166,7 @@ const App: React.FC = () => {
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const translationRef = useRef<HTMLDivElement>(null);
   const highlightPopoverRef = useRef<HTMLDivElement>(null);
+  const readerScrollRef = useRef<HTMLDivElement>(null);
   const articlesFetchSeq = useRef(0);
 
   useEffect(() => {
@@ -872,7 +873,7 @@ const App: React.FC = () => {
     // Boundary checks for toolbar
     const toolbarWidth = 100; // Approx width
     let x = rect.left + rect.width / 2;
-    let y = rect.top + window.scrollY - 10;
+    let y = rect.top + (readerScrollRef.current?.scrollTop ?? 0) - 10;
 
     // Ensure horizontal bounds
     if (x < toolbarWidth / 2 + 12) x = toolbarWidth / 2 + 12;
@@ -1167,12 +1168,12 @@ const App: React.FC = () => {
         if (isMobile) {
           // On mobile, position below the highlight and center horizontally
           pos = {
-            y: rect.bottom + window.scrollY + 10,
+            y: rect.bottom + (readerScrollRef.current?.scrollTop ?? 0) + 10,
             x: window.innerWidth / 2
           };
         } else {
           pos = {
-            y: rect.top + window.scrollY,
+            y: rect.top + (readerScrollRef.current?.scrollTop ?? 0),
             x: containerRect ? containerRect.right + 20 : rect.right + 20
           };
         }
@@ -1236,7 +1237,7 @@ const App: React.FC = () => {
                 minTop = Math.min(minTop, rect.top);
                 maxBottom = Math.max(maxBottom, rect.bottom);
               });
-              const y = (minTop + maxBottom) / 2 + window.scrollY;
+              const y = (minTop + maxBottom) / 2 + (readerScrollRef.current?.scrollTop ?? 0);
               const isMobile = window.innerWidth < 1024;
               const x = isMobile ? containerRect.right - 25 : containerRect.right + 40;
               indicators.push({ id: hl.id, x, y });
@@ -1255,7 +1256,7 @@ const App: React.FC = () => {
           if (hl && el) {
             const rect = el.getBoundingClientRect();
             const containerRect = articleContentRef.current?.getBoundingClientRect();
-            const y = rect.top + window.scrollY;
+            const y = rect.top + (readerScrollRef.current?.scrollTop ?? 0);
             const x = containerRect ? containerRect.right + 20 : rect.right + 20;
             
             
@@ -1486,7 +1487,7 @@ const App: React.FC = () => {
   // --- Render Functions ---
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+    <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
     </div>
   );
@@ -1495,7 +1496,7 @@ const App: React.FC = () => {
     // --- Verification wall: show OTP screen, never the main app ---
     if (pendingVerificationToken) {
       return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+        <div className="h-full overflow-y-auto flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-500">
             <div className="flex justify-center mb-8">
               <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-20 w-auto" />
@@ -1540,12 +1541,12 @@ const App: React.FC = () => {
     }
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      <div className="h-full overflow-y-auto flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
         <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-500">
           <div className="flex justify-center mb-8">
             <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-20 w-auto" />
           </div>
-          
+
           <h2 className="text-2xl font-bold text-center text-slate-800 dark:text-slate-100 mb-2">
             {authMode === 'login' ? t.welcomeBack : t.createAccount}
           </h2>
@@ -1644,7 +1645,7 @@ const App: React.FC = () => {
 
   if (selectedArticle) {
     return (
-      <div className="min-h-screen bg-[var(--bg-card)] text-[var(--text-main)] selection:bg-yellow-200/50 animate-in fade-in duration-300 theme-transition relative" onContextMenu={handleContextMenu} onClick={() => {
+      <div ref={readerScrollRef} className="h-full overflow-y-auto overscroll-contain bg-[var(--bg-card)] text-[var(--text-main)] selection:bg-yellow-200/50 animate-in fade-in duration-300 theme-transition relative" onContextMenu={handleContextMenu} onClick={() => {
         setContextMenu(null);
         setTranslationPopover(null);
         if (!window.getSelection()?.toString()) {
@@ -2015,7 +2016,7 @@ const App: React.FC = () => {
 
   return (
     <UIContext.Provider value={{ showToast, confirm: (msg, cb) => setConfirmModal({ message: msg, onConfirm: cb }), t }}>
-      <div className="min-h-screen bg-[var(--bg-main)] font-sans text-[var(--text-main)] selection:bg-blue-100 flex theme-transition">
+      <div className="h-full bg-[var(--bg-main)] font-sans text-[var(--text-main)] selection:bg-blue-100 flex theme-transition">
         <aside className="hidden lg:flex w-72 bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] flex-col sticky top-0 h-screen p-6">
           <div className="mb-12 flex items-center justify-between px-1">
             <img src={`${import.meta.env.BASE_URL}logo.png`} alt="sonra-okurum" className="h-12 w-auto object-contain rounded-xl shadow-md border border-[var(--border-color)]" />
@@ -2167,7 +2168,7 @@ const App: React.FC = () => {
             )}
           </header>
 
-          <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 sm:px-8 py-8">
             {isSettingsOpen ? (
               <div className="max-w-3xl mx-auto pb-20">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
