@@ -2520,7 +2520,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Bottom Nav (Mobile Only) */}
-          <nav className="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-x-0 border-b-0 border-[var(--border-color)] px-6 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] flex items-center justify-between z-[200] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-x-0 border-b-0 border-[var(--border-color)] px-6 pt-3 pb-[env(safe-area-inset-bottom)] flex items-center justify-between z-[200] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
             <button 
               onClick={() => { setActiveFilter({ type: 'all' }); setIsLibraryOpen(false); setIsSettingsOpen(false); }}
               className={`flex flex-col items-center gap-1 transition-all ${activeFilter.type === 'all' && !isLibraryOpen && !isSettingsOpen ? 'text-blue-600 scale-110' : 'text-[var(--text-muted)]'}`}
