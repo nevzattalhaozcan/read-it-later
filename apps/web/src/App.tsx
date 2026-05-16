@@ -1,7 +1,7 @@
 import React, { useEffect, useState, createContext, useRef, useCallback } from 'react';
 import {
   Loader2, ExternalLink, Clock, Plus, Trash2,
-  ChevronRight, X, CheckCircle2, AlertCircle, Info, Tag, Folder,
+  RefreshCw, ChevronRight, X, CheckCircle2, AlertCircle, Info, Tag, Folder,
   Inbox, Star, Search, MoreVertical,
   Archive, Check, MoreHorizontal, Edit3, Save,
   Move, Sun, Moon, Coffee, Highlighter, MessageSquarePlus,
@@ -665,20 +665,31 @@ const App: React.FC = () => {
   const handleExportAsTxt = () => {
     const lines: string[] = [];
     articles.forEach(article => {
-      lines.push(`# ${article.title}`);
+      lines.push(`${article.title.toUpperCase()}`);
       lines.push(`URL: ${article.url}`);
+      if (article.siteName) lines.push(`Source: ${article.siteName}`);
       if (article.tags?.length) lines.push(`Tags: ${article.tags.join(', ')}`);
       lines.push('');
+      
       const tmp = document.createElement('div');
       tmp.innerHTML = article.content || '';
       lines.push(tmp.textContent || '');
-      lines.push('\n---\n');
+      
+      if (article.highlights?.length) {
+        lines.push('\n--- HIGHLIGHTS & NOTES ---');
+        article.highlights.forEach((h, idx) => {
+          lines.push(`[${idx + 1}] "${h.text}"`);
+          if (h.note) lines.push(`    Note: ${h.note}`);
+        });
+      }
+      
+      lines.push('\n' + '='.repeat(40) + '\n');
     });
     const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `library-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `sonra-okurum-export-${new Date().toISOString().slice(0, 10)}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -2170,120 +2181,152 @@ const App: React.FC = () => {
 
           <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 sm:px-8 py-8">
             {isSettingsOpen ? (
-              <div className="max-w-3xl mx-auto pb-20">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+              <div className="max-w-3xl mx-auto pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center justify-between mb-10">
                   <div>
                     <h1 className="text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">{t.settings}</h1>
                     <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">{user?.email}</p>
                   </div>
+                  <button 
+                    onClick={closeSettingsPage}
+                    className="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all shadow-sm active:scale-95"
+                    title={t.back}
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
-                  <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 sm:p-6 shadow-sm">
-                    <div className="mb-6 flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--border-color)] text-lg font-bold">
+
+                <div className="grid gap-8 md:grid-cols-[1.2fr_0.8fr]">
+                  <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-6 sm:p-8 shadow-sm">
+                    <div className="mb-8 flex items-center gap-5">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-600 text-xl font-black">
                         {(user?.email?.[0] || 'U').toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-base font-semibold">{user?.email}</p>
-                        <p className="text-sm text-[var(--text-muted)]">{lang === 'tr' ? 'hesap ayarları' : 'account settings'}</p>
+                        <p className="truncate text-lg font-bold">{user?.email}</p>
+                        <p className="text-sm text-[var(--text-muted)] font-medium">{lang === 'tr' ? 'hesap ayarları' : 'account settings'}</p>
                       </div>
                     </div>
-                    <div className="space-y-4">
+
+                    <div className="space-y-6">
                       <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.email}</label>
+                        <label className="mb-2.5 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.email}</label>
                         <input
                           type="text"
                           value={settingsForm.email}
                           onChange={(e) => setSettingsForm(prev => ({ ...prev, email: e.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
+                          className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3.5 text-[var(--text-main)] outline-none transition-all focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                           placeholder={t.email}
                         />
                       </div>
-                      <div className="grid gap-4 md:grid-cols-2">
+
+                      <div className="grid gap-6 md:grid-cols-2">
                         <div>
-                          <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.currentPassword}</label>
+                          <label className="mb-2.5 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.currentPassword}</label>
                           <input
                             type="password"
                             value={settingsForm.currentPassword}
                             onChange={(e) => setSettingsForm(prev => ({ ...prev, currentPassword: e.target.value }))}
-                            className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
+                            className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3.5 text-[var(--text-main)] outline-none transition-all focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                             placeholder={t.currentPassword}
                           />
                         </div>
                         <div>
-                          <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.newPassword}</label>
+                          <label className="mb-2.5 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.newPassword}</label>
                           <input
                             type="password"
                             value={settingsForm.newPassword}
                             onChange={(e) => setSettingsForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                            className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
+                            className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3.5 text-[var(--text-main)] outline-none transition-all focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                             placeholder={t.newPassword}
                           />
                         </div>
                       </div>
-                      <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+
+                      <div className="flex flex-col gap-3 pt-4 sm:flex-row">
                         <button
                           onClick={() => handleSaveSettings('email')}
                           disabled={settingsLoading || !settingsForm.email.trim() || !settingsForm.currentPassword.trim()}
-                          className="flex-1 rounded-2xl bg-blue-600 px-4 py-3 font-bold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                          className="flex-1 rounded-2xl bg-blue-600 px-4 py-3.5 font-bold text-white transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/20 disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98]"
                         >
                           {t.saveEmail}
                         </button>
                         <button
                           onClick={() => handleSaveSettings('password')}
                           disabled={settingsLoading || !settingsForm.currentPassword.trim() || !settingsForm.newPassword.trim()}
-                          className="flex-1 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 font-bold transition-colors hover:bg-[var(--border-color)] disabled:cursor-not-allowed disabled:opacity-40"
+                          className="flex-1 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3.5 font-bold transition-all hover:bg-[var(--border-color)] disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98]"
                         >
                           {t.savePassword}
                         </button>
                       </div>
                     </div>
                   </section>
-                  <section className="space-y-4 rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 sm:p-6 shadow-sm">
-                    <div>
+
+                  <section className="space-y-4">
+                    <div className="px-2">
                       <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{lang === 'tr' ? 'güvenli işlemler' : 'secure actions'}</p>
-                      <h3 className="mt-2 text-lg font-semibold">{lang === 'tr' ? 'hesap işlemleri' : 'account actions'}</h3>
+                      <h3 className="mt-1 text-lg font-bold">{lang === 'tr' ? 'hızlı işlemler' : 'quick actions'}</h3>
                     </div>
-                    <button
-                      onClick={handleExportAsTxt}
-                      className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-4 text-left transition-colors hover:bg-[var(--border-color)]"
-                    >
-                      <div>
-                        <p className="font-semibold">{t.exportAsTxt}</p>
-                        <p className="text-sm text-[var(--text-muted)]">{lang === 'tr' ? 'tüm makaleleri metin dosyası olarak indir' : 'download all articles as a text file'}</p>
+
+                    <div className="grid gap-3">
+                      <button
+                        onClick={handleExportAsTxt}
+                        className="group flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 text-left transition-all hover:border-blue-600/30 hover:shadow-md active:scale-[0.98]"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-blue-600/5 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                            <Download className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">{t.exportAsTxt}</p>
+                            <p className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-wider mt-0.5">{lang === 'tr' ? 'tüm kütüphane' : 'full library'}</p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />
+                      </button>
+
+                      <button
+                        onClick={handleResetData}
+                        className="group flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 text-left transition-all hover:border-amber-500/30 hover:shadow-md active:scale-[0.98]"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-amber-500/5 flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-all">
+                            <RefreshCw className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">{t.resetData}</p>
+                            <p className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-wider mt-0.5">{lang === 'tr' ? 'temizle' : 'clear'}</p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />
+                      </button>
+
+                      <button
+                        onClick={handleDeleteAccount}
+                        className="group flex w-full items-center justify-between rounded-2xl border border-red-500/10 bg-red-500/5 p-5 text-left transition-all hover:bg-red-500/10 hover:shadow-md active:scale-[0.98]"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-600 group-hover:bg-red-600 group-hover:text-white transition-all">
+                            <Trash2 className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-red-600">{t.deleteAccount}</p>
+                            <p className="text-[10px] text-red-500/60 uppercase font-black tracking-wider mt-0.5">{lang === 'tr' ? 'kalıcı işlem' : 'permanent'}</p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-red-500/40" />
+                      </button>
+
+                      <div className="pt-4">
+                        <button
+                          onClick={() => { handleLogout(); closeSettingsPage(); }}
+                          className="flex w-full items-center justify-center gap-3 rounded-2xl bg-[var(--bg-sidebar)] border border-[var(--border-color)] px-4 py-4 font-bold text-[var(--text-muted)] hover:text-red-600 hover:border-red-600/20 transition-all active:scale-[0.98]"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          {t.logout}
+                        </button>
                       </div>
-                      <Download className="w-4 h-4 text-[var(--text-muted)]" />
-                    </button>
-                    <button
-                      onClick={handleResetData}
-                      className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-4 text-left transition-colors hover:bg-[var(--border-color)]"
-                    >
-                      <div>
-                        <p className="font-semibold">{t.resetData}</p>
-                        <p className="text-sm text-[var(--text-muted)]">{t.resetDataDescription}</p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />
-                    </button>
-                    <button
-                      onClick={handleDeleteAccount}
-                      className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-4 text-left text-red-600 transition-colors hover:bg-red-500/10"
-                    >
-                      <div>
-                        <p className="font-semibold">{t.deleteAccount}</p>
-                        <p className="text-sm text-red-500/80">{t.deleteAccountDescription}</p>
-                      </div>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => { handleLogout(); closeSettingsPage(); }}
-                      className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-4 text-left transition-colors hover:bg-[var(--border-color)]"
-                    >
-                      <div>
-                        <p className="font-semibold">{t.logout}</p>
-                        <p className="text-sm text-[var(--text-muted)]">{lang === 'tr' ? 'oturumu kapat' : 'sign out'}</p>
-                      </div>
-                      <LogOut className="w-4 h-4 text-[var(--text-muted)]" />
-                    </button>
+                    </div>
                   </section>
                 </div>
               </div>
@@ -2517,128 +2560,7 @@ const App: React.FC = () => {
         </main>
 
 
-        {isSettingsOpen && (
-          <div className="fixed inset-0 z-[210] bg-[var(--bg-main)] text-[var(--text-main)] animate-in fade-in duration-200 overflow-y-auto">
-            <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-6 md:px-6 md:py-10 pb-32">
-              <div className="mb-8 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[var(--text-muted)]">{t.settings}</p>
-                  <h2 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">{t.settings}</h2>
-                </div>
-                <button onClick={closeSettingsPage} className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-2.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-main)]">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
 
-              <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
-                <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 sm:p-6 shadow-sm">
-                  <div className="mb-6 flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--border-color)] text-lg font-bold">
-                      {(user?.email?.[0] || 'U').toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-semibold">{user?.email}</p>
-                      <p className="text-sm text-[var(--text-muted)]">{lang === 'tr' ? 'hesap ayarları' : 'account settings'}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.email}</label>
-                      <input
-                        type="text"
-                        value={settingsForm.email}
-                        onChange={(e) => setSettingsForm(prev => ({ ...prev, email: e.target.value }))}
-                        className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
-                        placeholder={t.email}
-                      />
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.currentPassword}</label>
-                        <input
-                          type="password"
-                          value={settingsForm.currentPassword}
-                          onChange={(e) => setSettingsForm(prev => ({ ...prev, currentPassword: e.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
-                          placeholder={t.currentPassword}
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.newPassword}</label>
-                        <input
-                          type="password"
-                          value={settingsForm.newPassword}
-                          onChange={(e) => setSettingsForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                          className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
-                          placeholder={t.newPassword}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-                      <button
-                        onClick={() => handleSaveSettings('email')}
-                        disabled={settingsLoading || !settingsForm.email.trim() || !settingsForm.currentPassword.trim()}
-                        className="flex-1 rounded-2xl bg-blue-600 px-4 py-3 font-bold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        {t.saveEmail}
-                      </button>
-                      <button
-                        onClick={() => handleSaveSettings('password')}
-                        disabled={settingsLoading || !settingsForm.currentPassword.trim() || !settingsForm.newPassword.trim()}
-                        className="flex-1 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 font-bold transition-colors hover:bg-[var(--border-color)] disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        {t.savePassword}
-                      </button>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="space-y-4 rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 sm:p-6 shadow-sm">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{lang === 'tr' ? 'güvenli işlemler' : 'secure actions'}</p>
-                    <h3 className="mt-2 text-lg font-semibold">{lang === 'tr' ? 'hesap işlemleri' : 'account actions'}</h3>
-                  </div>
-
-                  <button
-                    onClick={handleResetData}
-                    className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-4 text-left transition-colors hover:bg-[var(--border-color)]"
-                  >
-                    <div>
-                      <p className="font-semibold">{t.resetData}</p>
-                      <p className="text-sm text-[var(--text-muted)]">{t.resetDataDescription}</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />
-                  </button>
-
-                  <button
-                    onClick={handleDeleteAccount}
-                    className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-4 text-left text-red-600 transition-colors hover:bg-red-500/10"
-                  >
-                    <div>
-                      <p className="font-semibold">{t.deleteAccount}</p>
-                      <p className="text-sm text-red-500/80">{t.deleteAccountDescription}</p>
-                    </div>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={() => { handleLogout(); closeSettingsPage(); }}
-                    className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-4 text-left transition-colors hover:bg-[var(--border-color)]"
-                  >
-                    <div>
-                      <p className="font-semibold">{t.logout}</p>
-                      <p className="text-sm text-[var(--text-muted)]">{lang === 'tr' ? 'oturumu kapat' : 'sign out'}</p>
-                    </div>
-                    <LogOut className="w-4 h-4 text-[var(--text-muted)]" />
-                  </button>
-                </section>
-              </div>
-            </div>
-          </div>
-        )}
 
         {isLibraryOpen && (
           <div className="fixed top-[57px] bottom-[calc(60px+var(--safe-area-bottom))] inset-x-0 z-[190] bg-[var(--bg-main)] text-[var(--text-main)] animate-in slide-in-from-right duration-300 overflow-y-auto">
