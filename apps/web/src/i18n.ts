@@ -161,6 +161,8 @@ export const translations = {
     copyBibliography: 'Kaynakçayı Kopyala',
     articlesSelected: 'makale seçildi',
     select: 'Seç',
+    exportAsTxt: 'txt olarak dışa aktar',
+    exportDownloaded: 'dışa aktarıldı',
   },
   en: {
     appName: 'sonra-okurum',
@@ -322,5 +324,7 @@ export const translations = {
     copyBibliography: 'Copy Bibliography',
     articlesSelected: 'articles selected',
     select: 'Select',
+    exportAsTxt: 'export as txt',
+    exportDownloaded: 'exported successfully',
   }
 };

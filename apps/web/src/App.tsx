@@ -5,7 +5,7 @@ import {
   Inbox, Star, Search, MoreVertical,
   Archive, Check, MoreHorizontal, Edit3, Save,
   Move, Sun, Moon, Coffee, Highlighter, MessageSquarePlus,
-  StickyNote, ChevronDown, Settings, LogOut, Copy, Languages
+  StickyNote, ChevronDown, Settings, LogOut, Copy, Languages, Download
 } from 'lucide-react';
 import { translations, Lang } from './i18n';
 import { policies } from './policies';
@@ -659,6 +659,30 @@ const App: React.FC = () => {
     } finally {
       setSettingsLoading(false);
     }
+  };
+
+  const handleExportAsTxt = () => {
+    const lines: string[] = [];
+    articles.forEach(article => {
+      lines.push(`# ${article.title}`);
+      lines.push(`URL: ${article.url}`);
+      if (article.tags?.length) lines.push(`Tags: ${article.tags.join(', ')}`);
+      lines.push('');
+      const tmp = document.createElement('div');
+      tmp.innerHTML = article.content || '';
+      lines.push(tmp.textContent || '');
+      lines.push('\n---\n');
+    });
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `library-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(t.exportDownloaded, 'success');
   };
 
   const handleResetData = () => {
@@ -2144,6 +2168,125 @@ const App: React.FC = () => {
           </header>
 
           <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8">
+            {isSettingsOpen ? (
+              <div className="max-w-3xl mx-auto pb-20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+                  <div>
+                    <h1 className="text-3xl font-black tracking-tight text-[var(--text-main)] mb-1">{t.settings}</h1>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">{user?.email}</p>
+                  </div>
+                </div>
+                <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
+                  <section className="rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 sm:p-6 shadow-sm">
+                    <div className="mb-6 flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--border-color)] text-lg font-bold">
+                        {(user?.email?.[0] || 'U').toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold">{user?.email}</p>
+                        <p className="text-sm text-[var(--text-muted)]">{lang === 'tr' ? 'hesap ayarları' : 'account settings'}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.email}</label>
+                        <input
+                          type="text"
+                          value={settingsForm.email}
+                          onChange={(e) => setSettingsForm(prev => ({ ...prev, email: e.target.value }))}
+                          className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
+                          placeholder={t.email}
+                        />
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.currentPassword}</label>
+                          <input
+                            type="password"
+                            value={settingsForm.currentPassword}
+                            onChange={(e) => setSettingsForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                            className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
+                            placeholder={t.currentPassword}
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{t.newPassword}</label>
+                          <input
+                            type="password"
+                            value={settingsForm.newPassword}
+                            onChange={(e) => setSettingsForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                            className="w-full rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 text-[var(--text-main)] outline-none transition-colors focus:ring-2 focus:ring-blue-600"
+                            placeholder={t.newPassword}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                        <button
+                          onClick={() => handleSaveSettings('email')}
+                          disabled={settingsLoading || !settingsForm.email.trim() || !settingsForm.currentPassword.trim()}
+                          className="flex-1 rounded-2xl bg-blue-600 px-4 py-3 font-bold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {t.saveEmail}
+                        </button>
+                        <button
+                          onClick={() => handleSaveSettings('password')}
+                          disabled={settingsLoading || !settingsForm.currentPassword.trim() || !settingsForm.newPassword.trim()}
+                          className="flex-1 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-3 font-bold transition-colors hover:bg-[var(--border-color)] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {t.savePassword}
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                  <section className="space-y-4 rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 sm:p-6 shadow-sm">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--text-muted)]">{lang === 'tr' ? 'güvenli işlemler' : 'secure actions'}</p>
+                      <h3 className="mt-2 text-lg font-semibold">{lang === 'tr' ? 'hesap işlemleri' : 'account actions'}</h3>
+                    </div>
+                    <button
+                      onClick={handleExportAsTxt}
+                      className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-4 text-left transition-colors hover:bg-[var(--border-color)]"
+                    >
+                      <div>
+                        <p className="font-semibold">{t.exportAsTxt}</p>
+                        <p className="text-sm text-[var(--text-muted)]">{lang === 'tr' ? 'tüm makaleleri metin dosyası olarak indir' : 'download all articles as a text file'}</p>
+                      </div>
+                      <Download className="w-4 h-4 text-[var(--text-muted)]" />
+                    </button>
+                    <button
+                      onClick={handleResetData}
+                      className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-4 text-left transition-colors hover:bg-[var(--border-color)]"
+                    >
+                      <div>
+                        <p className="font-semibold">{t.resetData}</p>
+                        <p className="text-sm text-[var(--text-muted)]">{t.resetDataDescription}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />
+                    </button>
+                    <button
+                      onClick={handleDeleteAccount}
+                      className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-4 text-left text-red-600 transition-colors hover:bg-red-500/10"
+                    >
+                      <div>
+                        <p className="font-semibold">{t.deleteAccount}</p>
+                        <p className="text-sm text-red-500/80">{t.deleteAccountDescription}</p>
+                      </div>
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => { handleLogout(); closeSettingsPage(); }}
+                      className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-main)] px-4 py-4 text-left transition-colors hover:bg-[var(--border-color)]"
+                    >
+                      <div>
+                        <p className="font-semibold">{t.logout}</p>
+                        <p className="text-sm text-[var(--text-muted)]">{lang === 'tr' ? 'oturumu kapat' : 'sign out'}</p>
+                      </div>
+                      <LogOut className="w-4 h-4 text-[var(--text-muted)]" />
+                    </button>
+                  </section>
+                </div>
+              </div>
+            ) : (
             <div className="max-w-4xl mx-auto">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
                 <div>
@@ -2329,6 +2472,7 @@ const App: React.FC = () => {
                 )}
               </div>
             </div>
+            )}
           </div>
 
           {/* Bottom Nav (Mobile Only) */}
