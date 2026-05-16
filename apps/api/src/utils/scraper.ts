@@ -1,4 +1,4 @@
-import { JSDOM } from 'jsdom';
+import { JSDOM, VirtualConsole } from 'jsdom';
 import { Readability } from '@mozilla/readability';
 import * as cheerio from 'cheerio';
 import { logger } from '../lib/logger.js';
@@ -53,8 +53,21 @@ function isSPAShell(html: string): boolean {
   );
 }
 
+const virtualConsole = new VirtualConsole();
+virtualConsole.on('error', () => {}); // Silence CSS parsing errors and other JSDOM noise
+
+function cleanHtml(html: string): string {
+  if (!html) return '';
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+}
+
 function parseWithReadability(html: string, url: string) {
-  const dom = new JSDOM(html, { url });
+  const cleaned = cleanHtml(html);
+  // Ensure we have a valid HTML structure for Readability
+  const wrapped = cleaned.includes('<body') ? cleaned : `<html><body>${cleaned}</body></html>`;
+  const dom = new JSDOM(wrapped, { url, virtualConsole });
   return new Readability(dom.window.document).parse();
 }
 
@@ -113,13 +126,27 @@ export async function scrapeUrl(url: string, providedHtml?: string): Promise<Scr
         html = directHtml;
       } else {
         // Direct page loaded but content is thin — Jina was already in-flight, just await it
-        logger.info({ url, length: article?.textContent?.length }, '[Scraper] Content too short, awaiting Jina (already in-flight)...');
+        logger.info({ url, length: article?.textContent?.length }, '[Scraper] Content too short, awaiting Jina...');
         const jinaHtml = await jinaPromise;
         clearTimeout(jinaTimer);
-        if (jinaHtml && jinaHtml.length > directHtml.length) {
-          html = jinaHtml;
-          article = parseWithReadability(html, url);
+        
+        if (jinaHtml) {
+          logger.info({ url, jinaLength: jinaHtml.length }, '[Scraper] Jina content received');
+          const jinaArticle = parseWithReadability(jinaHtml, url);
+          
+          const jinaTextLen = jinaArticle?.textContent?.length || 0;
+          const directTextLen = article?.textContent?.length || 0;
+
+          if (jinaTextLen > directTextLen || jinaTextLen > 200) {
+            logger.info({ url, jinaTextLen, directTextLen }, '[Scraper] Using Jina content');
+            html = jinaHtml;
+            article = jinaArticle;
+          } else {
+            logger.info({ url, jinaTextLen, directTextLen }, '[Scraper] Jina content not better, sticking with direct');
+            html = directHtml;
+          }
         } else {
+          logger.warn({ url }, '[Scraper] Jina fallback failed (null response)');
           html = directHtml;
         }
       }
