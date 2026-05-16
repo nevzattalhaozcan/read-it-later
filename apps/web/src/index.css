@@ -100,6 +100,40 @@ button, a, [role="button"] {
   border: 1px solid var(--glass-border);
 }
 
+.mobile-bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 400;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-color);
+  border-radius: 2rem 2rem 0 0;
+  padding: 1.5rem;
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
+  animation: mobile-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mobile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 399;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-blur: 4px;
+  animation: fade-in 0.2s ease-out;
+}
+
+@keyframes mobile-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .safe-pb {
   padding-bottom: calc(var(--safe-area-bottom) + 80px);
 }

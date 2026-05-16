@@ -1803,91 +1803,134 @@ const App: React.FC = () => {
         </article>
 
         {contextMenu && (
-          <div
-            ref={contextMenuRef}
-            className="fixed z-[180] min-w-64 animate-in fade-in zoom-in-95 duration-150"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
-            onClick={(e) => e.stopPropagation()}
-            onContextMenu={(e) => e.preventDefault()}
-          >
-            <div className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-2xl backdrop-blur-md">
-              <button
-                onClick={handleCopySelection}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
-              >
-                <Copy className="w-4 h-4 text-[var(--text-muted)]" />
-                {t.copy}
-              </button>
-              {/* copy link to highlight removed per UX request */}
-              <button
-                onClick={handleSearchGoogle}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
-              >
-                <Search className="w-4 h-4 text-[var(--text-muted)]" />
-                {t.searchGoogleForSelection}
-              </button>
-              <button
-                onClick={handleTranslateSelection}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
-              >
-                <Languages className="w-4 h-4 text-[var(--text-muted)]" />
-                {t.translateSelection}
-              </button>
-              <div className="my-1 h-px bg-[var(--border-color)]" />
-              <button
-                onClick={() => { createHighlight(false); setContextMenu(null); }}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
-              >
-                <Highlighter className="w-4 h-4 text-blue-600" />
-                {t.highlight}
-              </button>
-              <button
-                onClick={() => { createHighlight(true); setContextMenu(null); }}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors"
-              >
-                <MessageSquarePlus className="w-4 h-4 text-blue-600" />
-                {t.addNote}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {translationPopover && (
-          <div
-            ref={translationRef}
-            className="fixed z-[181] w-80 max-w-[calc(100vw-2rem)] animate-in fade-in zoom-in-95 duration-150"
-            style={{ top: translationPopover.y + 8, left: translationPopover.x + 8 }}
-            onClick={(e) => e.stopPropagation()}
-            onContextMenu={(e) => e.preventDefault()}
-          >
-            <div className="overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-2xl backdrop-blur-md">
-              <div className="flex items-center justify-between gap-3 border-b border-[var(--border-color)] px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{t.translation}</p>
-                  <p className="truncate text-xs text-[var(--text-muted)]">{translationPopover.sourceText}</p>
+          <>
+            {window.innerWidth < 1024 && (
+              <div className="mobile-overlay" onClick={() => setContextMenu(null)} />
+            )}
+            <div 
+              ref={contextMenuRef}
+              className={window.innerWidth < 1024 ? "mobile-bottom-sheet" : "fixed z-[180] min-w-64 overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-200"}
+              style={window.innerWidth < 1024 ? {} : { top: contextMenu.y, left: contextMenu.x }}
+              onClick={(e) => e.stopPropagation()}
+              onContextMenu={(e) => e.preventDefault()}
+            >
+              {window.innerWidth < 1024 && (
+                <div className="flex justify-center mb-6">
+                  <div className="w-12 h-1.5 rounded-full bg-[var(--border-color)]" />
                 </div>
+              )}
+              
+              <div className={window.innerWidth < 1024 ? "space-y-1" : ""}>
                 <button
-                  onClick={() => setTranslationPopover(null)}
-                  className="shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] hover:bg-[var(--bg-main)] hover:text-[var(--text-main)] transition-colors"
-                  title={t.cancel}
+                  onClick={handleCopySelection}
+                  className="flex w-full items-center gap-3 px-4 py-4 lg:py-3 text-left text-sm font-bold lg:font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors rounded-2xl lg:rounded-none"
                 >
-                  <X className="w-4 h-4" />
+                  <Copy className="w-5 h-5 lg:w-4 lg:h-4 text-[var(--text-muted)]" />
+                  {t.copy}
                 </button>
-              </div>
-              <div className="px-4 py-3 text-sm leading-relaxed text-[var(--text-main)]">
-                {translationPopover.loading ? (
-                  <div className="flex items-center gap-2 text-[var(--text-muted)]">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {t.translating}
+                <button
+                  onClick={handleSearchGoogle}
+                  className="flex w-full items-center gap-3 px-4 py-4 lg:py-3 text-left text-sm font-bold lg:font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors rounded-2xl lg:rounded-none"
+                >
+                  <Search className="w-5 h-5 lg:w-4 lg:h-4 text-[var(--text-muted)]" />
+                  {t.searchGoogleForSelection}
+                </button>
+                <button
+                  onClick={handleTranslateSelection}
+                  className="flex w-full items-center gap-3 px-4 py-4 lg:py-3 text-left text-sm font-bold lg:font-medium text-[var(--text-main)] hover:bg-[var(--bg-main)] transition-colors rounded-2xl lg:rounded-none"
+                >
+                  <Languages className="w-5 h-5 lg:w-4 lg:h-4 text-[var(--text-muted)]" />
+                  {t.translateSelection}
+                </button>
+                
+                <div className="my-2 h-px bg-[var(--border-color)] lg:my-1" />
+                
+                <button
+                  onClick={() => { createHighlight(false); setContextMenu(null); }}
+                  className="flex w-full items-center gap-3 px-4 py-4 lg:py-3 text-left text-sm font-bold lg:font-medium text-blue-600 hover:bg-blue-600/5 transition-colors rounded-2xl lg:rounded-none"
+                >
+                  <Highlighter className="w-5 h-5 lg:w-4 lg:h-4" />
+                  {t.highlight}
+                </button>
+                <button
+                  onClick={() => { createHighlight(true); setContextMenu(null); }}
+                  className="flex w-full items-center gap-3 px-4 py-4 lg:py-3 text-left text-sm font-bold lg:font-medium text-blue-600 hover:bg-blue-600/5 transition-colors rounded-2xl lg:rounded-none"
+                >
+                  <MessageSquarePlus className="w-5 h-5 lg:w-4 lg:h-4" />
+                  {t.addNote}
+                </button>
+                
+                {window.innerWidth < 1024 && (
+                  <div className="pt-4">
+                    <button
+                      onClick={() => setContextMenu(null)}
+                      className="flex w-full items-center justify-center py-4 text-sm font-black uppercase tracking-widest text-[var(--text-muted)] bg-[var(--bg-main)] rounded-2xl active:scale-[0.98] transition-all"
+                    >
+                      {t.cancel}
+                    </button>
                   </div>
-                ) : translationPopover.error ? (
-                  <p className="text-red-600">{translationPopover.error}</p>
-                ) : (
-                  <p className="whitespace-pre-wrap">{translationPopover.translatedText}</p>
                 )}
               </div>
             </div>
-          </div>
+          </>
+        )}
+
+        {translationPopover && (
+          <>
+            {window.innerWidth < 1024 && (
+              <div className="mobile-overlay" onClick={() => setTranslationPopover(null)} />
+            )}
+            <div
+              ref={translationRef}
+              className={window.innerWidth < 1024 ? "mobile-bottom-sheet" : "fixed z-[181] w-80 max-w-[calc(100vw-2rem)] animate-in fade-in zoom-in-95 duration-150"}
+              style={window.innerWidth < 1024 ? {} : { top: translationPopover.y + 8, left: translationPopover.x + 8 }}
+              onClick={(e) => e.stopPropagation()}
+              onContextMenu={(e) => e.preventDefault()}
+            >
+              <div className={window.innerWidth < 1024 ? "" : "overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-2xl backdrop-blur-md"}>
+                {window.innerWidth < 1024 && (
+                  <div className="flex justify-center mb-6">
+                    <div className="w-12 h-1.5 rounded-full bg-[var(--border-color)]" />
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-3 border-b border-[var(--border-color)] px-4 py-3 lg:px-4 lg:py-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">{t.translation}</p>
+                    <p className="truncate text-xs text-[var(--text-muted)] font-medium mt-0.5">{translationPopover.sourceText}</p>
+                  </div>
+                  <button
+                    onClick={() => setTranslationPopover(null)}
+                    className="shrink-0 rounded-xl p-2 text-[var(--text-muted)] hover:bg-[var(--bg-main)] transition-colors border border-[var(--border-color)] lg:border-none"
+                    title={t.cancel}
+                  >
+                    <X className="w-5 h-5 lg:w-4 lg:h-4" />
+                  </button>
+                </div>
+                <div className="px-4 py-6 lg:py-3 text-base lg:text-sm leading-relaxed text-[var(--text-main)] font-medium lg:font-normal">
+                  {translationPopover.loading ? (
+                    <div className="flex items-center justify-center lg:justify-start gap-3 text-[var(--text-muted)] py-4 lg:py-0">
+                      <Loader2 className="w-5 h-5 lg:w-4 lg:h-4 animate-spin text-blue-600" />
+                      {t.translating}
+                    </div>
+                  ) : translationPopover.error ? (
+                    <p className="text-red-600 py-2">{translationPopover.error}</p>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{translationPopover.translatedText}</p>
+                  )}
+                </div>
+                {window.innerWidth < 1024 && !translationPopover.loading && (
+                   <div className="pt-4">
+                     <button
+                       onClick={() => setTranslationPopover(null)}
+                       className="w-full py-4 text-sm font-black uppercase tracking-widest text-[var(--text-muted)] bg-[var(--bg-main)] rounded-2xl"
+                     >
+                       {t.close}
+                     </button>
+                   </div>
+                )}
+              </div>
+            </div>
+          </>
         )}
 
         {/* Note Indicators */}
@@ -1907,15 +1950,54 @@ const App: React.FC = () => {
 
         {/* Floating Highlight Toolbar */}
         {highlightToolbar && (
-          <div className="highlight-toolbar" style={{ top: highlightToolbar.y, left: highlightToolbar.x }} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => createHighlight(false)} title={t.highlight}>
-              <Highlighter className="w-4 h-4" />
-            </button>
-            <div className="divider" />
-            <button onClick={() => createHighlight(true)} title={t.addNote}>
-              <MessageSquarePlus className="w-4 h-4" />
-            </button>
-          </div>
+          <>
+            {window.innerWidth < 1024 ? (
+              <div 
+                className="fixed bottom-24 left-4 right-4 z-[200] glass rounded-2xl p-2 flex items-center justify-around shadow-2xl animate-in slide-in-from-bottom-8 duration-300"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button 
+                  onClick={() => createHighlight(false)} 
+                  className="flex flex-col items-center gap-1.5 p-3 text-blue-600 active:scale-90 transition-all"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-blue-600/10 flex items-center justify-center">
+                    <Highlighter className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest">{t.highlight}</span>
+                </button>
+                <div className="w-px h-10 bg-[var(--border-color)]" />
+                <button 
+                  onClick={() => createHighlight(true)} 
+                  className="flex flex-col items-center gap-1.5 p-3 text-blue-600 active:scale-90 transition-all"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-blue-600/10 flex items-center justify-center">
+                    <MessageSquarePlus className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest">{t.addNote}</span>
+                </button>
+                <div className="w-px h-10 bg-[var(--border-color)]" />
+                <button 
+                  onClick={handleTranslateSelection} 
+                  className="flex flex-col items-center gap-1.5 p-3 text-[var(--text-muted)] active:scale-90 transition-all"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-[var(--bg-main)] flex items-center justify-center">
+                    <Languages className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest">{lang === 'tr' ? 'ÇEVİR' : 'TRANSLATE'}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="highlight-toolbar" style={{ top: highlightToolbar.y, left: highlightToolbar.x }} onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => createHighlight(false)} title={t.highlight}>
+                  <Highlighter className="w-4 h-4" />
+                </button>
+                <div className="divider" />
+                <button onClick={() => createHighlight(true)} title={t.addNote}>
+                  <MessageSquarePlus className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {/* Highlight Click Popover (Dynamic Sidebar or Mini Toolbar) */}
@@ -1923,10 +2005,11 @@ const App: React.FC = () => {
           const hl = (selectedArticle.highlights || []).find(h => h.id === activeHighlightPopover.id);
           if (!hl) return null;
           
+          const isMobile = window.innerWidth < 1024;
           const hasNote = hl.note && hl.note.trim().length > 0;
 
-          if (!hasNote && !isInlineEditing) {
-            // Pure Highlight - Show only delete
+          if (!hasNote && !isInlineEditing && !isMobile) {
+            // Pure Highlight - Show only delete (Desktop only)
             return (
               <div ref={highlightPopoverRef} className="absolute z-[150] animate-in fade-in zoom-in-95 duration-150" style={{ top: activeHighlightPopover.y, left: activeHighlightPopover.x, transform: 'translate(-50%, -100%) translateY(-10px)' }} onClick={(e) => e.stopPropagation()}>
                 <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl shadow-xl p-1 flex items-center">
@@ -1942,68 +2025,75 @@ const App: React.FC = () => {
             );
           }
 
-          // Highlight with Note - Show Sidebar Edit
-          const isMobile = window.innerWidth < 1024;
+          // Highlight with Note or Mobile View - Show Sidebar Edit or Bottom Sheet
           return (
-            <div 
-              ref={highlightPopoverRef}
-              className={`absolute z-[150] animate-in fade-in ${isMobile ? 'zoom-in-95' : 'slide-in-from-left-4'} duration-300 pointer-events-none`} 
-              style={{ 
-                top: activeHighlightPopover.y, 
-                left: activeHighlightPopover.x,
-                width: isMobile ? 'calc(100vw - 32px)' : '240px',
-                maxWidth: isMobile ? '400px' : 'none',
-                transform: isMobile ? 'translateX(-50%)' : 'none'
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-xl p-3 pointer-events-auto">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex gap-1">
+            <>
+              {isMobile && (
+                <div className="mobile-overlay" onClick={() => setActiveHighlightPopover(null)} />
+              )}
+              <div 
+                ref={highlightPopoverRef}
+                className={isMobile ? "mobile-bottom-sheet" : "absolute z-[150] animate-in fade-in slide-in-from-left-4 duration-300 pointer-events-none"} 
+                style={isMobile ? {} : { 
+                  top: activeHighlightPopover.y, 
+                  left: activeHighlightPopover.x,
+                  width: '240px'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={`${isMobile ? '' : 'bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-xl p-3 pointer-events-auto'}`}>
+                  {isMobile && (
+                    <div className="flex justify-center mb-6">
+                      <div className="w-12 h-1.5 rounded-full bg-[var(--border-color)]" />
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between mb-4 lg:mb-2">
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          const updatedHighlights = (selectedArticle.highlights || []).map(h => 
+                            h.id === hl.id ? { ...h, note: noteText } : h
+                          );
+                          const updatedArticle = { ...selectedArticle, highlights: updatedHighlights };
+                          setSelectedArticle(updatedArticle);
+                          setHighlightKey(k => k + 1);
+                          updateArticle(selectedArticle._id, { highlights: updatedHighlights } as any);
+                          setActiveHighlightPopover(null);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
+                        title={t.save}
+                      >
+                        <Check className="w-4 h-4" />
+                        <span className="lg:hidden">{t.save}</span>
+                      </button>
+                      <button 
+                        onClick={() => setActiveHighlightPopover(null)}
+                        className="p-2 lg:p-1.5 rounded-xl text-[var(--text-muted)] hover:bg-[var(--bg-main)] transition-colors border border-[var(--border-color)] lg:border-none"
+                        title={t.cancel}
+                      >
+                        <X className="w-5 h-5 lg:w-4 lg:h-4" />
+                      </button>
+                    </div>
                     <button 
-                      onClick={() => {
-                        const updatedHighlights = (selectedArticle.highlights || []).map(h => 
-                          h.id === hl.id ? { ...h, note: noteText } : h
-                        );
-                        // Optimistic update
-                        const updatedArticle = { ...selectedArticle, highlights: updatedHighlights };
-                        setSelectedArticle(updatedArticle);
-                        setHighlightKey(k => k + 1);
-                        
-                        updateArticle(selectedArticle._id, { highlights: updatedHighlights } as any);
-                        setActiveHighlightPopover(null);
-                      }}
-                      className="p-1.5 rounded-lg text-green-600 hover:bg-green-600/10 transition-colors"
-                      title={t.save}
+                      onClick={() => deleteHighlight(hl.id)}
+                      className="p-2 lg:p-1.5 rounded-xl text-red-600 hover:bg-red-500/10 transition-colors border border-red-500/10 lg:border-none"
+                      title={t.deleteHighlight}
                     >
-                      <Check className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => setActiveHighlightPopover(null)}
-                      className="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-main)] transition-colors"
-                      title={t.cancel}
-                    >
-                      <X className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5 lg:w-4 lg:h-4" />
                     </button>
                   </div>
-                  <button 
-                    onClick={() => deleteHighlight(hl.id)}
-                    className="p-1.5 rounded-lg text-red-600 hover:bg-red-500/10 transition-colors"
-                    title={t.deleteHighlight}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <textarea 
+                    autoFocus
+                    className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] rounded-2xl p-4 lg:p-3 text-sm lg:text-xs text-[var(--text-main)] focus:ring-2 focus:ring-blue-600 outline-none resize-none font-sans"
+                    placeholder={t.notePlaceholder}
+                    rows={isMobile ? 6 : 4}
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                  />
                 </div>
-                <textarea 
-                  autoFocus
-                  className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl p-3 text-xs text-[var(--text-main)] focus:ring-2 focus:ring-blue-600 outline-none resize-none font-sans"
-                  placeholder={t.notePlaceholder}
-                  rows={4}
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                />
               </div>
-            </div>
+            </>
           );
         })()}
 
