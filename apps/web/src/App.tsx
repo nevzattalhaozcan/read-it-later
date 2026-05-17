@@ -914,6 +914,31 @@ const App: React.FC = () => {
     };
   }, [selectedArticle, handleTextSelection]);
 
+  // Auto-adjust desktop translation popover if it overflows window edges
+  useEffect(() => {
+    if (translationPopover && translationRef.current && window.innerWidth >= 1024) {
+      const rect = translationRef.current.getBoundingClientRect();
+      let newX = translationPopover.x;
+      let newY = translationPopover.y;
+      let changed = false;
+
+      if (rect.right > window.innerWidth - 16) {
+        newX = window.innerWidth - rect.width - 24;
+        changed = true;
+      }
+      if (rect.bottom > window.innerHeight - 16) {
+        newY = translationPopover.y - (rect.bottom - (window.innerHeight - 16));
+        if (newY < 16) newY = 16; // Don't overflow top
+        changed = true;
+      }
+
+      if (changed && (newX !== translationPopover.x || newY !== translationPopover.y)) {
+        setTranslationPopover(prev => prev ? { ...prev, x: newX, y: newY } : null);
+      }
+    }
+  }, [translationPopover?.translatedText, translationPopover?.loading]);
+
+
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     // If left button is still down (selection in progress), don't show context menu
     if (e.buttons & 1) return;
@@ -1887,13 +1912,16 @@ const App: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
               onContextMenu={(e) => e.preventDefault()}
             >
-              <div className={window.innerWidth < 1024 ? "" : "overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-2xl backdrop-blur-md"}>
+              <div 
+                className={window.innerWidth < 1024 ? "" : "overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-2xl backdrop-blur-md flex flex-col"}
+                style={{ maxHeight: window.innerWidth < 1024 ? 'none' : '80vh' }}
+              >
                 {window.innerWidth < 1024 && (
                   <div className="flex justify-center mb-6">
                     <div className="w-12 h-1.5 rounded-full bg-[var(--border-color)]" />
                   </div>
                 )}
-                <div className="flex items-center justify-between gap-3 border-b border-[var(--border-color)] px-4 py-3 lg:px-4 lg:py-3">
+                <div className="shrink-0 flex items-center justify-between gap-3 border-b border-[var(--border-color)] px-4 py-3 lg:px-4 lg:py-3">
                   <div className="min-w-0">
                     <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">{t.translation}</p>
                     <p className="truncate text-xs text-[var(--text-muted)] font-medium mt-0.5">{translationPopover.sourceText}</p>
@@ -1906,7 +1934,7 @@ const App: React.FC = () => {
                     <X className="w-5 h-5 lg:w-4 lg:h-4" />
                   </button>
                 </div>
-                <div className="px-4 py-6 lg:py-3 text-base lg:text-sm leading-relaxed text-[var(--text-main)] font-medium lg:font-normal">
+                <div className="overflow-y-auto custom-scrollbar px-4 py-6 lg:py-3 text-base lg:text-sm leading-relaxed text-[var(--text-main)] font-medium lg:font-normal">
                   {translationPopover.loading ? (
                     <div className="flex items-center justify-center lg:justify-start gap-3 text-[var(--text-muted)] py-4 lg:py-0">
                       <Loader2 className="w-5 h-5 lg:w-4 lg:h-4 animate-spin text-blue-600" />
